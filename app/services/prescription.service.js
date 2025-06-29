@@ -9,7 +9,7 @@ class PrescriptionService {
     async addPrescription(prescription) {
         const connection = await this.pool.getConnection();
         try {
-            const { maLanKham, maThuoc, lieuluong, soluong, thoigianSD} = prescription;
+            const { maLanKham, maThuoc, lieuluong, soluong, donvi, thoigianSD} = prescription;
             
             const [existing] = await connection.query(
                 'SELECT maLanKham FROM toathuoc WHERE maLanKham = ? and maThuoc = ?',
@@ -21,11 +21,11 @@ class PrescriptionService {
             
             // Chèn hồ sơ bệnh nhân mới
             await connection.query(
-                'INSERT INTO toathuoc (maLanKham, maThuoc, lieuluong, soluong, thoigianSD) VALUES (?, ?, ?, ?, ?)',
-                [maLanKham, maThuoc, lieuluong, soluong, thoigianSD]
+                'INSERT INTO toathuoc (maLanKham, maThuoc, lieuluong, soluong, donvi, thoigianSD) VALUES (?, ?, ?, ?, ?, ?)',
+                [maLanKham, maThuoc, lieuluong, soluong, donvi, thoigianSD]
             );
             
-            return { maLanKham, maThuoc, lieuluong, soluong, thoigianSD };
+            return { maLanKham, maThuoc, lieuluong, soluong, donvi, thoigianSD };
         } catch (error) {
             // Xử lý lỗi và trả về thông báo lỗi
             if (error.code === 'ER_DUP_ENTRY') {
@@ -49,33 +49,54 @@ class PrescriptionService {
         }
     }
 
-    async find (filter){
+    async find(filter) {
         const connection = await this.pool.getConnection();
         try {
-            // Tìm kiếm hồ sơ lần khám
+            // Kiểm tra filter
+            if (!filter || typeof filter !== 'object') {
+                throw new ApiError(400, 'Filter không hợp lệ');
+            }
+    
+            // Tạo điều kiện lọc
             const filterConditions = [];
             const filterValues = [];
             if (filter.maLanKham) {
                 filterConditions.push('maLanKham = ?');
-                filterValues.push(`%${filter.maLanKham}%`);
+                filterValues.push(filter.maLanKham);
             }
             if (filter.maThuoc) {
                 filterConditions.push('maThuoc = ?');
-                filterValues.push(`%${filter.maThuoc}%`);
+                filterValues.push(filter.maThuoc);
             }
-            if (filter.lieuluong) {
-                filterConditions.push('lieuluong LIKE ?');
-                filterValues.push(`%${filter.lieuluong}%`);
+            if (filter.lieuDung) {
+                filterConditions.push('lieuDung LIKE ?');
+                filterValues.push(`%${filter.lieuDung}%`);
             }
-            const whereClause = filterConditions.length > 0 ? 'WHERE ' + filterConditions.join(' AND ') : '';
+    
+            // Kiểm tra nếu không có điều kiện lọc
+            if (filterConditions.length === 0) {
+                throw new ApiError(400, 'Phải cung cấp ít nhất một điều kiện lọc');
+            }
+    
+            // Tạo truy vấn
+            const whereClause = 'WHERE ' + filterConditions.join(' AND ');
             const query = `SELECT * FROM toathuoc ${whereClause}`;
+    
+            // Thực hiện truy vấn
             const [rows] = await connection.query(query, filterValues);
-            // if (rows.length === 0) {
-            //     throw new ApiError(404, 'Không tìm thấy toa thuốc nào');
-            // }
+    
+            // Kiểm tra kết quả
+            if (rows.length === 0) {
+                throw new ApiError(404, 'Không tìm thấy toa thuốc nào');
+            }
+    
             return rows;
         } catch (error) {
-            console.error('Lỗi khi tìm kiếm toa thuốc:', error);
+            console.error('Lỗi khi tìm kiếm toa thuốc:', {
+                error: error.message,
+                query,
+                filterValues
+            });
             throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi tìm kiếm toa thuốc');
         } finally {
             connection.release();
@@ -144,20 +165,20 @@ class PrescriptionService {
                 throw new ApiError(404, `Không tìm thấy toa thuốc với maLanKham: ${maLanKham} và maThuoc: ${maThuoc}`);
             }
             // Cập nhật toa thuốc
-            const { lieuluong, soluong, thoigianSD } = payload;
+            const { lieuluong, soluong, donvi, thoigianSD } = payload;
             const query = `
                 UPDATE toathuoc
-                SET lieuluong = ?, soluong = ?, thoigianSD = ?
+                SET lieuluong = ?, soluong = ?, thoigianSD = ?, donvi = ?
                 WHERE maLanKham = ? AND maThuoc = ?
             `;
-            const params = [lieuluong, soluong, thoigianSD, maLanKham, maThuoc];
+            const params = [lieuluong, soluong, donvi, thoigianSD, maLanKham, maThuoc];
             const [result] = await connection.query(query, params);
             // Kiểm tra xem có bản ghi nào bị ảnh hưởng không
             if (result.affectedRows === 0) {
                 throw new ApiError(404, 'Không tìm thấy toa thuốc với maLanKham: ' + maLanKham + ' và maThuoc: ' + maThuoc);
             }
             // Trả về thông tin toa thuốc đã cập nhật
-            return { maLanKham, maThuoc, lieuluong, soluong, thoigianSD };
+            return { maLanKham, maThuoc, lieuluong, soluong, donvi, thoigianSD };
         } catch (error) {
             // Xử lý lỗi và trả về thông báo lỗi
             if (error.code === 'ER_DUP_ENTRY') {

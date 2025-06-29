@@ -6,21 +6,33 @@ class WorkingTimeService {
         this.pool = client; // client là một pool kết nối MySQL
     }
 
-    // Hàm chuyển đổi định dạng ngày sinh từ 'dd/mm/yyyy' sang 'yyyy-mm-dd'
+    // Hàm chuyển đổi định dạng ngày từ 'dd/mm/yyyy' sang 'yyyy-mm-dd'
     formatDateToMySQL(dateString) {
         if (!dateString) return null;
+
+        // Kiểm tra nếu ngày đã ở định dạng yyyy-mm-dd
+        const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (isoDateRegex.test(dateString)) {
+            // Kiểm tra tính hợp lệ của ngày
+            const date = new Date(dateString);
+            if (!isNaN(date.getTime()) && date.toISOString().startsWith(dateString)) {
+                return dateString; // Trả về nguyên giá trị nếu hợp lệ
+            }
+            throw new ApiError(400, 'Ngày không hợp lệ');
+        }
+
+        // Chuyển đổi nếu ngày ở định dạng dd/mm/yyyy
         const parts = dateString.split('/');
         if (parts.length !== 3) {
-            throw new ApiError(400, 'Định dạng ngày sinh không hợp lệ');
+            throw new ApiError(400, 'Định dạng ngày không hợp lệ');
         }
         const [day, month, year] = parts.map(Number);
         const date = new Date(year, month - 1, day);
         if (isNaN(date.getTime()) || date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
-            throw new ApiError(400, 'Ngày sinh không hợp lệ');
+            throw new ApiError(400, 'Ngày không hợp lệ');
         }
         return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
     }
-
     async addWorkingTime(WorkingTime) {
         const connection = await this.pool.getConnection();
         try {
@@ -59,7 +71,7 @@ class WorkingTimeService {
 
             // Thêm điều kiện vào truy vấn nếu có bộ lọc
             if (filter) {
-                const conditions = [];
+                let conditions = [];
                 if (filter.maBS) {
                     conditions.push('maBS = ?');
                     params.push(filter.maBS);

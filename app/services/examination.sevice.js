@@ -9,6 +9,19 @@ class ExaminationService {
     // Hàm chuyển đổi định dạng ngày từ 'dd/mm/yyyy' sang 'yyyy-mm-dd'
     formatDateToMySQL(dateString) {
         if (!dateString) return null;
+
+        // Kiểm tra nếu ngày đã ở định dạng yyyy-mm-dd
+        const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (isoDateRegex.test(dateString)) {
+            // Kiểm tra tính hợp lệ của ngày
+            const date = new Date(dateString);
+            if (!isNaN(date.getTime()) && date.toISOString().startsWith(dateString)) {
+                return dateString; // Trả về nguyên giá trị nếu hợp lệ
+            }
+            throw new ApiError(400, 'Ngày không hợp lệ');
+        }
+
+        // Chuyển đổi nếu ngày ở định dạng dd/mm/yyyy
         const parts = dateString.split('/');
         if (parts.length !== 3) {
             throw new ApiError(400, 'Định dạng ngày không hợp lệ');
@@ -235,6 +248,7 @@ class ExaminationService {
             connection.release();
         }
     }
+
 }
 
 module.exports = ExaminationService;

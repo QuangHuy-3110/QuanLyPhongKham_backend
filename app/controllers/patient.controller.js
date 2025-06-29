@@ -17,19 +17,23 @@ exports.create = async (req, res, next) => {
 exports.findAll = async (req, res, next) => {
     let documents = [];
     try {
-        const patientService = new PatientService(pool);    
-        const { name } = req.query;
-        if (name) {
-            documents = await patientService.findByName(name);
-        } else {
-            documents = await patientService.find({});
-        }
+        const patientService = new PatientService(pool);
+        const { cccdBN, tendangnhapBN } = req.query;
+        
+        // Tạo bộ lọc dựa trên các thuộc tính được cung cấp
+        const filter = {};
+        if (cccdBN) filter.cccdBN = cccdBN;
+        if (tendangnhapBN) filter.tendangnhapBN = tendangnhapBN;
+
+        // Gọi phương thức find với bộ lọc
+        documents = await patientService.find(filter);
+        
+        return res.send(documents);
     } catch (error) {
         return next(
             new ApiError(500, 'An error occurred while retrieving patients')
         );
     }
-    return res.send(documents); 
 };
 
 exports.findOne = async (req, res, next) => {
