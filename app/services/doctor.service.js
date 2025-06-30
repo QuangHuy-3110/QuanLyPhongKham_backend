@@ -1,5 +1,5 @@
-// const bcrypt = require('bcryptjs');
-// const crypto = require("crypto");
+const bcrypt = require('bcryptjs');
+const crypto = require("crypto");
 // const sendEmail = require("./email.service");
 const mysql = require('mysql2/promise');
 const ApiError = require('../api-error');

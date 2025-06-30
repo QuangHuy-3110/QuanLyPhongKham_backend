@@ -1,5 +1,5 @@
-// const bcrypt = require('bcryptjs');
-// const crypto = require("crypto");
+const bcrypt = require('bcryptjs');
+const crypto = require("crypto");
 // const sendEmail = require("./email.service");
 const mysql = require('mysql2/promise');
 const ApiError = require('../api-error');
@@ -41,7 +41,7 @@ class PatientService {
         const connection = await this.pool.getConnection();
         try {
             const { emailBN, cccdBN, soBHYT, hotenBN, sdtBN, ngaysinhBN, 
-                    diachiBN, chieucao, cannang, nhommau } = patient;
+                    diachiBN, chieucao, cannang, nhommau, tendangnhapBN, matkhauBN } = patient;
 
             // Kiểm tra cccdBN đã tồn tại
             const [existing] = await connection.query(
@@ -50,6 +50,15 @@ class PatientService {
             );
             if (existing.length > 0) {
                 throw new ApiError(400, 'Số CCCD đã tồn tại');
+            }
+
+            // Kiểm tra ten dang nhập đã tồn tại
+            const [exis] = await connection.query(
+                'SELECT cccdBN FROM benhnhan WHERE tendangnhapBN = ?',
+                [tendangnhapBN]
+            );
+            if (exis.length > 0) {
+                throw new ApiError(400, 'Số tên đăng nhập đã tồn tại');
             }
     
             // Sinh maBN
@@ -69,13 +78,13 @@ class PatientService {
     
             // Chèn bệnh nhân với maBN
             await connection.query(
-                'INSERT INTO benhnhan (maBN, emailBN, cccdBN, soBHYT, hotenBN, sdtBN, ngaysinhBN, diachiBN, chieucao, cannang, nhommau) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO benhnhan (maBN, emailBN, cccdBN, soBHYT, hotenBN, sdtBN, ngaysinhBN, diachiBN, chieucao, cannang, nhommau, tendangnhapBN, matkhauBN) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [maBN, emailBN, cccdBN, soBHYT, hotenBN, sdtBN, formattedDate, 
-                    diachiBN, chieucao, cannang, nhommau]
+                    diachiBN, chieucao, cannang, nhommau, tendangnhapBN, matkhauBN]
             );
     
             // Trả về thông tin bệnh nhân
-            return { maBN, emailBN, cccdBN, soBHYT, hotenBN, sdtBN, ngaysinhBN: formattedDate, diachiBN, chieucao, cannang, nhommau };
+            return { maBN, emailBN, cccdBN, soBHYT, hotenBN, sdtBN, ngaysinhBN: formattedDate, diachiBN, chieucao, cannang, nhommau, tendangnhapBN, matkhauBN };
         } catch (error) {
             console.error('Lỗi khi thêm bệnh nhân:', error);
             throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm bệnh nhân');
@@ -152,7 +161,7 @@ class PatientService {
         const connection = await this.pool.getConnection();
         try {
             const { emailBN, cccdBN, soBHYT, hotenBN, sdtBN, ngaysinhBN, 
-                    diachiBN, chieucao, cannang, nhommau } = payload;
+                    diachiBN, chieucao, cannang, nhommau, matkhauBN, tendangnhapBN } = payload;
 
             // Chuyển đổi định dạng ngày sinh
             const formattedDate = this.formatDateToMySQL(ngaysinhBN);
@@ -160,17 +169,19 @@ class PatientService {
             const query = `
                 UPDATE benhnhan 
                 SET emailBN = ?, cccdBN = ?, soBHYT = ?, hotenBN = ?, sdtBN = ?, 
-                    ngaysinhBN = ?, diachiBN = ?, chieucao = ?, cannang = ?, nhommau = ?
+                    ngaysinhBN = ?, diachiBN = ?, chieucao = ?, cannang = ?, nhommau = ?,
+                    matkhauBN = ?, tendangnhapBN = ?
                 WHERE maBN = ?
             `;
             const params = [emailBN, cccdBN, soBHYT, hotenBN, sdtBN, formattedDate, 
-                            diachiBN, chieucao, cannang, nhommau, id];
+                            diachiBN, chieucao, cannang, nhommau, matkhauBN, tendangnhapBN, id];
             const [result] = await connection.query(query, params);
             
             if (result.affectedRows === 0) {
                 throw new ApiError(404, 'Không tìm thấy bệnh nhân với ID: ' + id);
             }
-            return { maBN: id, emailBN, cccdBN, soBHYT, hotenBN, sdtBN, ngaysinhBN: formattedDate, diachiBN, chieucao, cannang, nhommau };
+            return { maBN: id, emailBN, cccdBN, soBHYT, hotenBN, sdtBN, ngaysinhBN: formattedDate, 
+                    diachiBN, chieucao, cannang, nhommau, matkhauBN, tendangnhapBN };
         } catch (error) {
             console.error('Lỗi khi cập nhật bệnh nhân:', error);
             throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi cập nhật bệnh nhân');

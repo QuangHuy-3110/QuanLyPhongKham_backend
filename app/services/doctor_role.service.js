@@ -1,5 +1,7 @@
 const mysql = require('mysql2/promise');
 const ApiError = require('../api-error');
+const bcrypt = require('bcryptjs');
+const crypto = require("crypto");
 
 class DoctorRoleService {
     constructor(client) {
