@@ -52,12 +52,10 @@ class PrescriptionService {
     async find(filter) {
         const connection = await this.pool.getConnection();
         try {
-            // Kiểm tra filter
             if (!filter || typeof filter !== 'object') {
                 throw new ApiError(400, 'Filter không hợp lệ');
             }
     
-            // Tạo điều kiện lọc
             const filterConditions = [];
             const filterValues = [];
             if (filter.maLanKham) {
@@ -68,34 +66,24 @@ class PrescriptionService {
                 filterConditions.push('maThuoc = ?');
                 filterValues.push(filter.maThuoc);
             }
-            if (filter.lieuDung) {
-                filterConditions.push('lieuDung LIKE ?');
-                filterValues.push(`%${filter.lieuDung}%`);
+            if (filter.lieuluong) {
+                filterConditions.push('lieuluong LIKE ?');
+                filterValues.push(`%${filter.lieuluong}%`);
             }
     
-            // Kiểm tra nếu không có điều kiện lọc
-            if (filterConditions.length === 0) {
-                throw new ApiError(400, 'Phải cung cấp ít nhất một điều kiện lọc');
+            let query = `SELECT * FROM toathuoc`;
+            if (filterConditions.length > 0) {
+                query += ` WHERE ${filterConditions.join(' AND ')}`;
             }
     
-            // Tạo truy vấn
-            const whereClause = 'WHERE ' + filterConditions.join(' AND ');
-            const query = `SELECT * FROM toathuoc ${whereClause}`;
-    
-            // Thực hiện truy vấn
+            console.log('Query:', query, 'Values:', filterValues);
             const [rows] = await connection.query(query, filterValues);
     
-            // Kiểm tra kết quả
-            if (rows.length === 0) {
-                throw new ApiError(404, 'Không tìm thấy toa thuốc nào');
-            }
-    
-            return rows;
+            return rows.length > 0 ? rows : [];
         } catch (error) {
             console.error('Lỗi khi tìm kiếm toa thuốc:', {
                 error: error.message,
-                query,
-                filterValues
+                stack: error.stack
             });
             throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi tìm kiếm toa thuốc');
         } finally {
