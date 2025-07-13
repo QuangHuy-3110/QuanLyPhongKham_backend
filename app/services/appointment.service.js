@@ -33,6 +33,7 @@ class AppointmentService {
         }
         return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
     }
+
     async addAppointment (appointment) {
         const connection = await this.pool.getConnection();
         try {
@@ -94,29 +95,35 @@ class AppointmentService {
     async find (filter){
         const connection = await this.pool.getConnection();
         try {
-            const { maBN, maBS, trangthai, ngaythangnam } = filter;
-            let query = 'SELECT * FROM lichhen WHERE 1=1';
-            const params = [];
+            // const { maBN, maBS, trangthai, ngaythangnam } = filter;
+            let query = 'SELECT * FROM lichhen';
+            const values = [];
+            
+            // Build WHERE clause based on filter parameters
+            const conditions = [];
+            if (filter.maBN) {
+                conditions.push('maBN LIKE ?');
+                values.push(`%${filter.maBN}%`);
+            }
+            if (filter.maBS) {
+                conditions.push('maBS LIKE ?');
+                values.push(`%${filter.maBS}%`);
+            }
+            if (filter.trangthai) {
+                conditions.push('trangthai LIKE ?');
+                values.push(`%${filter.trangthai}%`);
+            }
+            if (filter.ngaythangnam) {
+                const formattedDate = this.formatDateToMySQL(filter.ngaythangnam);
+                conditions.push('ngaythangnam LIKE ?');
+                values.push(`%${formattedDate}%`);
+            }
 
-            if (maBN) {
-                query += ' AND maBN = ?';
-                params.push(maBN);
+            if (conditions.length > 0) {
+                query += ' WHERE ' + conditions.join(' AND ');
             }
-            if (maBS) {
-                query += ' AND maBS = ?';
-                params.push(maBS);
-            }
-            if (trangthai) {
-                query += ' AND trangthai = ?';
-                params.push(trangthai);
-            }
-            if (ngaythangnam) {
-                const formattedDate = this.formatDateToMySQL(ngaythangnam);
-                query += ' AND ngaythangnam = ?';
-                params.push(formattedDate);
-            }
-
-            const [rows] = await connection.query(query, params);
+    
+            const [rows] = await connection.query(query, values);
             return rows;
         } catch (error) {
             console.error('Lỗi khi tìm kiếm cuộc hẹn:', error);

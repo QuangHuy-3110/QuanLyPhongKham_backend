@@ -4,7 +4,7 @@ const ApiError = require('../api-error');
 
 exports.create = async (req, res, next) => {
     try {
-        const doctorService = new DoctorService(pool);        
+        const doctorService = new DoctorService(pool);
         const document = await doctorService.addDoctor(req.body);
         return res.send(document);
     } catch (error) {
@@ -18,18 +18,23 @@ exports.findAll = async (req, res, next) => {
     let documents = [];
     try {
         const doctorService = new DoctorService(pool);    
-        const { name } = req.query;
-        if (name) {
-            documents = await doctorService.findByName(name);
-        } else {
-            documents = await doctorService.find({});
-        }
+        const { cccdBS, tenBS, sdtBS, emailBS, soCCHN } = req.query;
+        const filter = {};
+        
+        // Build filter object based on provided query parameters
+        if (cccdBS) filter.cccdBS = cccdBS;
+        if (tenBS) filter.tenBS = tenBS;
+        if (sdtBS) filter.sdtBS = sdtBS;
+        if (emailBS) filter.emailBS = emailBS;
+        if (soCCHN) filter.soCCHN = soCCHN;
+
+        documents = await doctorService.find(filter);
+        return res.send(documents); 
     } catch (error) {
         return next(
             new ApiError(500, 'An error occurred while retrieving doctors')
         );
     }
-    return res.send(documents); 
 };
 
 exports.findOne = async (req, res, next) => {

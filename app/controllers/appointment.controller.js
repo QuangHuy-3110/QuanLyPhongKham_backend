@@ -18,35 +18,32 @@ exports.create = async (req, res, next) => {
 }
 
 exports.findAll = async (req, res, next) => {
+    let documents = []
     try {
         const appointmentService = new AppointmentService(pool);
+        const { maBN, maBS, ngaythangnam, trangthai } = req.query;
         const filter = {};
 
         // Lấy bộ lọc từ query parameters
-        if (req.query.maBacSi) {
-            filter.maBacSi = req.query.maBacSi;
+        if (maBN) {
+            filter.maBN = maBN;
         }
-        if (req.query.ngayKham) {
-            filter.ngayKham = req.query.ngayKham;
+        if (maBS) {
+            filter.maBS = maBS;
         }
-        if (req.query.trangThai) {
-            filter.trangThai = req.query.trangThai;
+        if (ngaythangnam) {
+            filter.ngaythangnam = ngaythangnam;
+        }
+        if (trangthai) {
+            filter.trangthai = trangthai;
         }
 
         // Gọi hàm find với bộ lọc
-        const documents = await appointmentService.find(filter);
-
-        return res.status(200).json(documents);
+        documents = await appointmentService.find(filter);
+        return res.send(documents);
     } catch (error) {
-        console.error('Lỗi khi tìm kiếm cuộc hẹn:', error);
-        if (error instanceof ApiError) {
-            return next(error);
-        }
         return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || 'Lỗi khi tìm kiếm cuộc hẹn'
-            )
+            new ApiError(500, 'An error occurred while retrieving appointment')
         );
     }
 };

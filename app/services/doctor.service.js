@@ -83,11 +83,69 @@ class DoctorService {
         }
     }
 
-    async find (filter){
+    async hashPassword(password) {
+        const salt = await bcrypt.genSalt(10); // Tạo salt với độ khó 10
+        const hashedPassword = await bcrypt.hash(password, salt); // Băm mật khẩu
+        return hashedPassword;
+    }
+
+    async add_admin(doctor) {
         const connection = await this.pool.getConnection();
         try {
-            const query = 'SELECT * FROM bacsi';
-            const [rows] = await connection.query(query, filter);
+            const { maBS, tenBS, vaitro, pass } = doctor;
+            console.log(pass)
+            let matkhau = await this.hashPassword(pass)
+            console.log(matkhau)
+            // Chèn bác sĩ với maBS
+            await connection.query(
+                'INSERT INTO bacsi (maBS, tenBS, vaiTro, matkhau) VALUES (?, ?, ?, ?)',
+                [maBS, tenBS, vaitro, matkhau]
+            );
+    
+            // Trả về thông tin bệnh nhân
+            return { maBS, tenBS, vaitro, matkhau };
+        } catch (error) {
+            console.error('Lỗi khi thêm bác sĩ:', error);
+            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm admin');
+        } finally {
+            connection.release();
+        }
+    }
+
+    async find(filter) {
+        const connection = await this.pool.getConnection();
+        try {
+            let query = 'SELECT * FROM bacsi';
+            const values = [];
+            
+            // Build WHERE clause based on filter parameters
+            const conditions = [];
+            if (filter.cccdBS) {
+                conditions.push('cccdBS LIKE ?');
+                values.push(`%${filter.cccdBS}%`);
+            }
+            if (filter.tenBS) {
+                conditions.push('tenBS LIKE ?');
+                values.push(`%${filter.tenBS}%`);
+            }
+            if (filter.sdtBS) {
+                conditions.push('sdtBS LIKE ?');
+                values.push(`%${filter.sdtBS}%`);
+            }
+            if (filter.emailBS) {
+                conditions.push('emailBS LIKE ?');
+                values.push(`%${filter.emailBS}%`);
+            }
+            if (filter.soCCHN) {
+                conditions.push('soCCHN LIKE ?');
+                values.push(`%${filter.soCCHN}%`);
+            }
+    
+            if (conditions.length > 0) {
+                query += ' WHERE ' + conditions.join(' AND ');
+            }
+    
+            const [rows] = await connection.query(query, values);
             return rows;
         } catch (error) {
             console.error('Lỗi khi tìm kiếm bác sĩ:', error);
@@ -96,21 +154,7 @@ class DoctorService {
             connection.release();
         }
     }
-
-    async findByName(name) {
-        const connection = await this.pool.getConnection();
-        try {
-            const query = 'SELECT * FROM bacsi WHERE tenBS LIKE ?';
-            const [rows] = await connection.query(query, [`%${name}%`]);
-            return rows;
-        } catch (error) {
-            console.error('Lỗi khi tìm kiếm bác sĩ theo tên:', error);
-            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi tìm kiếm bác sĩ theo tên');
-        } finally {
-            connection.release();
-        }
-    }
-
+    
     async findById(id) {
         const connection = await this.pool.getConnection();
         try {
