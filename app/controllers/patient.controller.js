@@ -18,12 +18,13 @@ exports.findAll = async (req, res, next) => {
     let documents = [];
     try {
         const patientService = new PatientService(pool);
-        const { cccdBN, tendangnhapBN } = req.query;
+        const { cccdBN, tendangnhapBN, xoa } = req.query;
         
         // Tạo bộ lọc dựa trên các thuộc tính được cung cấp
         const filter = {};
         if (cccdBN) filter.cccdBN = cccdBN;
         if (tendangnhapBN) filter.tendangnhapBN = tendangnhapBN;
+        if (xoa) filter.xoa = xoa;
 
         // Gọi phương thức find với bộ lọc
         documents = await patientService.find(filter);

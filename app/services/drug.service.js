@@ -48,8 +48,19 @@ class DrugService {
     async find (filter){
         const connection = await this.pool.getConnection();
         try {
-            const query = 'SELECT * FROM thuoc';
-            const [rows] = await connection.query(query, filter);
+
+            const conditions = [];
+            const values = [];
+            if(filter.xoa) {
+                conditions.push('xoa = ?');
+                values.push(filter.xoa);
+            }
+            let query = 'SELECT * FROM thuoc';
+            if (conditions.length > 0) {
+                query += ' WHERE ' + conditions.join(' AND ');
+            }
+            
+            const [rows] = await connection.query(query, values);
             return rows;
         } catch (error) {
             console.error('Lỗi khi tìm kiếm thuốc:', error);
@@ -93,21 +104,21 @@ class DrugService {
     async update(id, payload) {
         const connection = await this.pool.getConnection();
         try {
-            const { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc } = payload;
+            const { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc, xoa } = payload;
 
             const query = `
                 UPDATE thuoc
-                SET tenThuoc = ?, soluongThuoc = ?, donvitinhThuoc = ?, noisanxuatThuoc = ?, soluong_minThuoc = ?
+                SET tenThuoc = ?, soluongThuoc = ?, donvitinhThuoc = ?, noisanxuatThuoc = ?, soluong_minThuoc = ?, xoa = ?
                 WHERE maThuoc = ?
             `;
-            const params = [tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc, id];
+            const params = [tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc, xoa, id];
             const [result] = await connection.query(query, params);
             
             if (result.affectedRows === 0) {
                 throw new ApiError(404, 'Không tìm thấy thuốc với ID: ' + id);
             }
             // Trả về thông tin thuốc đã cập nhật   
-            return { maThuoc: id, tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc };
+            return { maThuoc: id, tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc, xoa };
             
         } catch (error) {
             console.error('Lỗi khi cập nhật thuốc:', error);

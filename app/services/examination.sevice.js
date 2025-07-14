@@ -119,13 +119,18 @@ class ExaminationService {
                     params.push(filter.maHS);
                 }
                 if (filter.maBS) {
-                conditions.push('maBS = ?');
-                params.push(filter.maBS);
-            }
+                    conditions.push('maBS = ?');
+                    params.push(filter.maBS);
+                }
                 if (filter.ngaythangnam) {
                     conditions.push('ngaythangnam = ?');
                     params.push(filter.ngaythangnam);
                 }
+                if (filter.xoa) {
+                    conditions.push('xoa = ?');
+                    params.push(filter.xoa);
+                }
+
                 if (conditions.length > 0) {
                     query += ' WHERE ' + conditions.join(' AND ');
                 }
@@ -146,7 +151,7 @@ class ExaminationService {
     async findById(id) {
         const connection = await this.pool.getConnection();
         try {
-            const query = 'SELECT * FROM lankham WHERE maLanKham = ?';
+            const query = 'SELECT * FROM lankham WHERE xoa = 0 AND maLanKham = ?';
             const [rows] = await connection.query(query, [id]);
             if (rows.length === 0) {
                 throw new ApiError(404, 'Không tìm thấy hồ sơ lần khám với ID: ' + id);
@@ -165,7 +170,7 @@ class ExaminationService {
         try {
             // Lấy các trường từ payload
             const {trieuchung, thutuckham, chuandoan, lieutrinhdieutri, 
-                    ngaytaikham, ngaythangnamkham, maHS , stt_lankham, maBS} = payload;
+                    ngaytaikham, ngaythangnamkham, maHS , stt_lankham, maBS, xoa} = payload;
             // Chuyển đổi định dạng ngày
             const formattedDate = this.formatDateToMySQL(ngaythangnamkham);
             const formattedNgayTaiKham = this.formatDateToMySQL(ngaytaikham);
@@ -173,11 +178,11 @@ class ExaminationService {
             const query = `
                 UPDATE lankham
                 SET trieuchung = ?, thutuckham = ?, chuandoan = ?, lieutrinhdieutri = ?, 
-                    ngaytaikham = ?, ngaythangnamkham = ?, maHS = ?, stt_lankham = ?, maBS = ?
+                    ngaytaikham = ?, ngaythangnamkham = ?, maHS = ?, stt_lankham = ?, maBS = ?, xoa = 0
                 WHERE maLanKham = ?
             `;
             const params = [trieuchung, thutuckham, chuandoan, lieutrinhdieutri,
-                            formattedNgayTaiKham, formattedDate, maHS, stt_lankham, maBS, id];
+                            formattedNgayTaiKham, formattedDate, maHS, stt_lankham, maBS, xoa, id];
             
             const [result] = await connection.query(query, params);
             // Kiểm tra xem có bản ghi nào bị ảnh hưởng không
@@ -187,7 +192,7 @@ class ExaminationService {
             
             // Trả về thông tin hồ sơ lần khám đã cập nhật
             return { maLanKham: id, trieuchung, thutuckham, chuandoan, lieutrinhdieutri,
-                     ngaytaikham: formattedNgayTaiKham, ngaythangnamkham: formattedDate, maHS, stt_lankham, maBS };
+                     ngaytaikham: formattedNgayTaiKham, ngaythangnamkham: formattedDate, maHS, stt_lankham, maBS, xoa };
         } catch (error) {
             // Xử lý lỗi và trả về thông báo lỗi
             if (error.code === 'ER_DUP_ENTRY') {

@@ -33,6 +33,9 @@ exports.findAll = async (req, res, next) => {
         if (req.query.ngaythangnam) {
             filter.ngaythangnam = req.query.ngaythangnam;
         }
+        if (req.query.xoa) {
+            filter.xoa = req.query.xoa; 
+        }
 
         // Gọi hàm find với bộ lọc
         const documents = await workingtimeService.find(filter);

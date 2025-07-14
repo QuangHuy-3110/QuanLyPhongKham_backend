@@ -110,6 +110,10 @@ class PatientService {
                     conditions.push('tendangnhapBN=?');
                     params.push(filter.tendangnhapBN);
                 }
+                if (filter.xoa) {
+                    conditions.push('xoa=?');
+                    params.push(filter.xoa);
+                }
                 if (conditions.length > 0) {
                     query += ' WHERE ' + conditions.join(' AND ');
                 }
@@ -143,7 +147,7 @@ class PatientService {
     async findById(id) {
         const connection = await this.pool.getConnection();
         try {
-            const query = 'SELECT * FROM benhnhan WHERE maBN = ?';
+            const query = 'SELECT * FROM benhnhan WHERE xoa = 0 AND maBN = ?';
             const [rows] = await connection.query(query, [id]);
             if (rows.length === 0) {
                 throw new ApiError(404, 'Không tìm thấy bệnh nhân với ID: ' + id);
@@ -161,7 +165,7 @@ class PatientService {
         const connection = await this.pool.getConnection();
         try {
             const { emailBN, cccdBN, soBHYT, hotenBN, sdtBN, ngaysinhBN, 
-                    diachiBN, chieucao, cannang, nhommau, matkhauBN, tendangnhapBN } = payload;
+                    diachiBN, chieucao, cannang, nhommau, matkhauBN, tendangnhapBN, xoa } = payload;
 
             // Chuyển đổi định dạng ngày sinh
             const formattedDate = this.formatDateToMySQL(ngaysinhBN);
@@ -170,18 +174,18 @@ class PatientService {
                 UPDATE benhnhan 
                 SET emailBN = ?, cccdBN = ?, soBHYT = ?, hotenBN = ?, sdtBN = ?, 
                     ngaysinhBN = ?, diachiBN = ?, chieucao = ?, cannang = ?, nhommau = ?,
-                    matkhauBN = ?, tendangnhapBN = ?
+                    matkhauBN = ?, tendangnhapBN = ?, xoa = ?
                 WHERE maBN = ?
             `;
             const params = [emailBN, cccdBN, soBHYT, hotenBN, sdtBN, formattedDate, 
-                            diachiBN, chieucao, cannang, nhommau, matkhauBN, tendangnhapBN, id];
+                            diachiBN, chieucao, cannang, nhommau, matkhauBN, tendangnhapBN, xoa, id];
             const [result] = await connection.query(query, params);
             
             if (result.affectedRows === 0) {
                 throw new ApiError(404, 'Không tìm thấy bệnh nhân với ID: ' + id);
             }
             return { maBN: id, emailBN, cccdBN, soBHYT, hotenBN, sdtBN, ngaysinhBN: formattedDate, 
-                    diachiBN, chieucao, cannang, nhommau, matkhauBN, tendangnhapBN };
+                    diachiBN, chieucao, cannang, nhommau, matkhauBN, tendangnhapBN, xoa };
         } catch (error) {
             console.error('Lỗi khi cập nhật bệnh nhân:', error);
             throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi cập nhật bệnh nhân');

@@ -18,10 +18,15 @@ exports.findAll = async (req, res, next) => {
     let documents = [];
     try {
         const recordService = new RecordService(pool);
-        const { maBN } = req.query;
+        const { maBN, ngaylapHS, xoa } = req.query;
         if (maBN) {
             documents = await recordService.findByMaBN(maBN);
-        } else {
+        } else if (ngaylapHS) {
+            documents = await recordService.find({ ngaylapHS });
+        } else if (xoa) {
+            documents = await recordService.find({ xoa });
+        }
+        else {
             documents = await recordService.find({});
         }
     } catch (error) {

@@ -21,12 +21,17 @@ exports.findAll = async (req, res, next) => {
     let documents = [];
     try {
         const drugService = new DrugService(pool);
-        const { name } = req.query;
+        const { name, xoa } = req.query;
+        const filter = {};
         if (name) {
             documents = await drugService.findByName(name);
-        } else {
-            documents = await drugService.find({});
+            return res.send(documents);
+        } 
+        if (xoa) {
+            filter.xoa = xoa;
         }
+        documents = await drugService.find(filter);
+        return res.send(documents); 
     } catch (error) {
         return next(
             new ApiError(500, 'An error occurred while retrieving drugs')

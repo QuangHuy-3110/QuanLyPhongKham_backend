@@ -18,7 +18,7 @@ exports.findAll = async (req, res, next) => {
     let documents = [];
     try {
         const doctorService = new DoctorService(pool);    
-        const { cccdBS, tenBS, sdtBS, emailBS, soCCHN } = req.query;
+        const { cccdBS, tenBS, sdtBS, emailBS, soCCHN, xoa } = req.query;
         const filter = {};
         
         // Build filter object based on provided query parameters
@@ -27,6 +27,7 @@ exports.findAll = async (req, res, next) => {
         if (sdtBS) filter.sdtBS = sdtBS;
         if (emailBS) filter.emailBS = emailBS;
         if (soCCHN) filter.soCCHN = soCCHN;
+        if (xoa) filter.xoa = xoa;
 
         documents = await doctorService.find(filter);
         return res.send(documents); 

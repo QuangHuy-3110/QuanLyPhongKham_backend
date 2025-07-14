@@ -99,6 +99,10 @@ class RecordService {
                 filterConditions.push('ngaylapHS LIKE ?');
                 filterValues.push(`%${filter.ngaylapHS}%`);
             }
+            if (filter.xoa) {
+                filterConditions.push('xoa = ?');
+                filterValues.push(filter.xoa);
+            }
             if (filterConditions.length > 0) {
                 const query = `SELECT * FROM hosobenhnhan WHERE ${filterConditions.join(' AND ')}`;
                 rows = await connection.query(query, filterValues);
@@ -124,7 +128,7 @@ class RecordService {
     async findByMaBN(maBN) {
         const connection = await this.pool.getConnection();
         try {
-            const query = 'SELECT * FROM hosobenhnhan WHERE maBN LIKE ?';
+            const query = 'SELECT * FROM hosobenhnhan WHERE xoa = 0 AND maBN LIKE ?';
             const [rows] = await connection.query(query, [`%${maBN}%`]);
             return rows;
         } catch (error) {
@@ -138,7 +142,7 @@ class RecordService {
     async findById(id) {
         const connection = await this.pool.getConnection();
         try {
-            const query = 'SELECT * FROM hosobenhnhan WHERE maHS = ?';
+            const query = 'SELECT * FROM hosobenhnhan WHERE xoa = 0 AND maHS = ?';
             const [rows] = await connection.query(query, [id]);
             if (rows.length === 0) {
                 throw new ApiError(404, 'Không tìm thấy hồ sơ bệnh nhân với ID: ' + id);
@@ -156,16 +160,16 @@ class RecordService {
         const connection = await this.pool.getConnection();
         try {
             // Lấy các trường từ payload
-            const { maBN, ngaylapHS } = payload;  
+            const { maBN, ngaylapHS, xoa } = payload;  
             // Chuyển đổi định dạng ngày
             const formattedDate = this.formatDateToMySQL(ngaylapHS);
             // Cập nhật hồ sơ bệnh nhân
             const query = `
                 UPDATE hosobenhnhan 
-                SET maBN = ?, ngaylapHS = ?
+                SET maBN = ?, ngaylapHS = ?, xoa = ?
                 WHERE maHS = ?
             `;
-            const params = [maBN, formattedDate, id];
+            const params = [maBN, formattedDate, xoa, id];
             const [result] = await connection.query(query, params);
 
             // Kiểm tra xem có bản ghi nào bị ảnh hưởng không
@@ -173,7 +177,7 @@ class RecordService {
                 throw new ApiError(404, 'Không tìm thấy hồ sơ bệnh nhân với ID: ' + id);
             }
             // Trả về thông tin hồ sơ bệnh nhân đã cập nhật
-            return { maHS: id, maBN, ngaylapHS: formattedDate };
+            return { maHS: id, maBN, ngaylapHS: formattedDate, xoa };
         } catch (error) {
             console.error('Lỗi khi cập nhật hồ sơ bệnh nhân:', error);
             throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi cập nhật hồ sơ bệnh nhân');

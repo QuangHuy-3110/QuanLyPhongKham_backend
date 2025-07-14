@@ -75,8 +75,7 @@ class PrescriptionService {
             if (filterConditions.length > 0) {
                 query += ` WHERE ${filterConditions.join(' AND ')}`;
             }
-    
-            console.log('Query:', query, 'Values:', filterValues);
+
             const [rows] = await connection.query(query, filterValues);
     
             return rows.length > 0 ? rows : [];

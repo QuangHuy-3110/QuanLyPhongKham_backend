@@ -140,6 +140,11 @@ class DoctorService {
                 conditions.push('soCCHN LIKE ?');
                 values.push(`%${filter.soCCHN}%`);
             }
+
+            if (filter.xoa) {
+                conditions.push('xoa LIKE ?');
+                values.push(`%${filter.xoa}%`);
+            }
     
             if (conditions.length > 0) {
                 query += ' WHERE ' + conditions.join(' AND ');
@@ -158,7 +163,7 @@ class DoctorService {
     async findById(id) {
         const connection = await this.pool.getConnection();
         try {
-            const query = 'SELECT * FROM bacsi WHERE maBS = ?';
+            const query = 'SELECT * FROM bacsi WHERE xoa = 0 AND maBS = ?';
             const [rows] = await connection.query(query, [id]);
             if (rows.length === 0) {
                 throw new ApiError(404, 'Không tìm thấy bác sĩ với ID: ' + id);
@@ -175,7 +180,7 @@ class DoctorService {
     async update(id, payload) {
         const connection = await this.pool.getConnection();
         try {
-            const { cccdBS, tenBS, ngaysinhBS, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau } = payload;
+            const { cccdBS, tenBS, ngaysinhBS, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, xoa } = payload;
 
             // Chuyển đổi định dạng ngày sinh
             const formattedDate = this.formatDateToMySQL(ngaysinhBS);
@@ -183,16 +188,16 @@ class DoctorService {
             const query = `
                 UPDATE bacsi
                 SET cccdBS = ?, tenBS = ?, ngaysinhBS = ?, sdtBS = ?, emailBS = ?,
-                    diachiBS = ?, soCCHN = ?, noicapCCHN = ?, matkhau = ?
+                    diachiBS = ?, soCCHN = ?, noicapCCHN = ?, matkhau = ?, xoa = ?
                 WHERE maBS = ?
             `;
-            const params = [cccdBS, tenBS, formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, id];
+            const params = [cccdBS, tenBS, formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, xoa, id];
             const [result] = await connection.query(query, params);
             
             if (result.affectedRows === 0) {
                 throw new ApiError(404, 'Không tìm thấy bác sĩ với ID: ' + id);
             }
-            return { maBS: id, cccdBS, tenBS, ngaysinhBS: formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau };
+            return { maBS: id, cccdBS, tenBS, ngaysinhBS: formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, xoa };
         } catch (error) {
             console.error('Lỗi khi cập nhật bác sĩ:', error);
             throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi cập nhật bác sĩ');
