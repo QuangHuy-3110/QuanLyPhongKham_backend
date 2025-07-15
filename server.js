@@ -192,6 +192,69 @@ async function startServer() {
               }
             });
           }
+
+          // thêm thuốc
+          if (parsedMessage.type === 'interact_drug' && parsedMessage.sender === 'Admin') {
+            const drug = parsedMessage.data;
+
+            clients.forEach((ws, clientId) => {
+              if (clientId !== 'Admin' && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'drug_update',
+                  data: drug,
+                }));
+                console.log(`Thông báo cập nhật số lượng thuốc gửi đến bác sĩ ${clientId}`);
+              }
+            });
+          }
+
+          // Thêm hồ sơ bệnh án
+          if (parsedMessage.type === 'interact_record' && parsedMessage.sender === 'doctor') {
+            const record = parsedMessage.data;
+
+            const doctorWs = clients.get('Admin');
+            if (doctorWs && doctorWs.readyState === WebSocket.OPEN) {
+              doctorWs.send(JSON.stringify({
+                type: 'record_created',
+                data: record,
+              }));
+              console.log(`Thông báo thêm hồ sơ khám bệnh gửi đến Admin`);
+            } else {
+              console.log(`Admin không trực tuyến`);
+            }
+          }
+
+          // Thêm sồ lần khám bệnh
+          if (parsedMessage.type === 'interact_exam' && parsedMessage.sender === 'doctor') {
+            const exam = parsedMessage.data;
+
+            const doctorWs = clients.get('Admin');
+            if (doctorWs && doctorWs.readyState === WebSocket.OPEN) {
+              doctorWs.send(JSON.stringify({
+                type: 'exam_created',
+                data: exam,
+              }));
+              console.log(`Thông báo thêm số lần khám bệnh gửi đến Admin`);
+            } else {
+              console.log(`Admin không trực tuyến`);
+            }
+          }
+
+          // Thêm lịch khám bệnh
+          if (parsedMessage.type === 'created_schedule' && parsedMessage.sender === 'Admin') {
+            const schedule = parsedMessage.data;
+
+            const doctorWs = clients.get(schedule.maBS);
+            if (doctorWs && doctorWs.readyState === WebSocket.OPEN) {
+              doctorWs.send(JSON.stringify({
+                type: 'created_schedule',
+                data: schedule,
+              }));
+              console.log(`Thông báo thêm lịch làm việc cho bác sĩ ${schedule.maBN}`);
+            } else {
+              console.log(`Bác sĩ ${schedule.maBN} không trực tuyến`);
+            }
+          }
           
         } catch (error) {
           console.error('Lỗi khi xử lý tin nhắn:', error);
