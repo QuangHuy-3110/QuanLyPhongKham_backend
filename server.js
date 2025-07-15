@@ -62,8 +62,6 @@ async function startServer() {
           // Xử lý lịch hẹn mới từ bệnh nhân
           if (parsedMessage.type === 'new_appointment') {
             const appointment = parsedMessage.data;
-            // Lưu lịch hẹn vào DB (giả sử có hàm saveAppointment)
-            // await saveAppointment(appointment);
 
             // Gửi thông báo đến bác sĩ
             const doctorWs = clients.get(appointment.maBS);
@@ -93,8 +91,6 @@ async function startServer() {
           // Xử lý hủy lịch hẹn từ admin
           if (parsedMessage.type === 'cancel_appointment' && parsedMessage.sender === 'Admin') {
             const appointment = parsedMessage.data;
-            // Xóa hoặc cập nhật trạng thái lịch hẹn trong DB (giả sử có hàm cancelAppointment)
-            // await cancelAppointment(appointment);
 
             // Gửi thông báo đến bệnh nhân
             const patientWs = patientClients.get(appointment.maBN);
@@ -120,6 +116,83 @@ async function startServer() {
               console.log(`Bác sĩ ${appointment.maBS} không trực tuyến`);
             }
           }
+
+          // Xử lý hẹn từ bác sĩ
+          if (parsedMessage.type === 'appointment_examined' && parsedMessage.sender === 'doctor') {
+            const appointment = parsedMessage.data;
+
+            // Gửi thông báo đến bệnh nhân
+            const patientWs = patientClients.get(appointment.maBN);
+            if (patientWs && patientWs.readyState === WebSocket.OPEN) {
+              patientWs.send(JSON.stringify({
+                type: 'appointment_examined',
+                data: appointment,
+              }));
+              console.log(`Thông báo đã khám gửi đến bệnh nhân ${appointment.maBN}`);
+            } else {
+              console.log(`Bệnh nhân ${appointment.maBN} không trực tuyến`);
+            }
+
+            // Gửi thông báo đến bác sĩ (tùy chọn)
+            const doctorWs = clients.get('Admin');
+            if (doctorWs && doctorWs.readyState === WebSocket.OPEN) {
+              doctorWs.send(JSON.stringify({
+                type: 'appointment_examined',
+                data: appointment,
+              }));
+              console.log(`Thông báo đã khám gửi đến Admin`);
+            } else {
+              console.log(`Admin không trực tuyến`);
+            }
+          }
+
+          // Thêm bệnh nhân
+          if (parsedMessage.type === 'interact_patient' && parsedMessage.sender === 'doctor') {
+            const patient = parsedMessage.data;
+
+            const doctorWs = clients.get('Admin');
+            if (doctorWs && doctorWs.readyState === WebSocket.OPEN) {
+              doctorWs.send(JSON.stringify({
+                type: 'patient_update',
+                data: patient,
+              }));
+              console.log(`Thông báo thêm bệnh nhân gửi đến Admin`);
+            } else {
+              console.log(`Admin không trực tuyến`);
+            }
+          }
+
+          // Xóa bệnh nhân
+          if (parsedMessage.type === 'interact_patient' && parsedMessage.sender === 'Admin') {
+            const patient = parsedMessage.data;
+
+            // Gửi thông báo đến toàn bộ bác sĩ
+            clients.forEach((ws, clientId) => {
+              if (clientId !== 'Admin' && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'patient_update',
+                  data: patient,
+                }));
+                console.log(`Thông báo xóa bệnh nhân gửi đến bác sĩ ${clientId}`);
+              }
+            });
+          }
+
+          // xóa số lượng thuốc
+          if (parsedMessage.type === 'interact_drug' && parsedMessage.sender === 'doctor') {
+            const drug = parsedMessage.data;
+
+            clients.forEach((ws, clientId) => {
+              if ( ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'drug_update',
+                  data: drug,
+                }));
+                console.log(`Thông báo cập nhật số lượng thuốc gửi đến bác sĩ ${clientId}`);
+              }
+            });
+          }
+          
         } catch (error) {
           console.error('Lỗi khi xử lý tin nhắn:', error);
         }

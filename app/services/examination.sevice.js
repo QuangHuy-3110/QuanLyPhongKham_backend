@@ -62,7 +62,7 @@ class ExaminationService {
             );  
             let maLanKham;
             if (lastExamination.length === 0) {
-                maLanKham = 'LK0000001';
+                maLanKham = 'LK00000001';
             } else {
                 const lastId = parseInt(lastExamination[0].maLanKham.replace('LK', ''));
                 maLanKham = `LK${String(lastId + 1).padStart(8, '0')}`;
