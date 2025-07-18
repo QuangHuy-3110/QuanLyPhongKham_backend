@@ -21,7 +21,7 @@ exports.findAll = async (req, res, next) => {
     let documents = [];
     try {
         const drugService = new DrugService(pool);
-        const { name, xoa } = req.query;
+        const { name, xoa, maNPP } = req.query;
         const filter = {};
         if (name) {
             documents = await drugService.findByName(name);
@@ -30,6 +30,9 @@ exports.findAll = async (req, res, next) => {
         if (xoa) {
             filter.xoa = xoa;
         }
+        if (maNPP) {
+            filter.maNPP = maNPP;
+        }
         documents = await drugService.find(filter);
         return res.send(documents); 
     } catch (error) {
@@ -37,7 +40,6 @@ exports.findAll = async (req, res, next) => {
             new ApiError(500, 'An error occurred while retrieving drugs')
         );
     }
-    return res.send(documents); 
 };
 
 exports.findOne = async (req, res, next) => {

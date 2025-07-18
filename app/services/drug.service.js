@@ -9,7 +9,7 @@ class DrugService {
     async addDrug(drug) {
         const connection = await this.pool.getConnection();
         try {
-            const { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc } = drug;
+            const { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc } = drug;
 
             // Kiểm tra cccdBS đã tồn tại
             const [existing] = await connection.query(
@@ -19,16 +19,22 @@ class DrugService {
             if (existing.length > 0) {
                 throw new ApiError(400, 'Mã số thuốc đã tồn tại');
             }
-
+            const [existing_maNPP] = await connection.query(
+                'SELECT maNPP FROM nhaphanphoi WHERE maNPP = ?',
+                [maNPP]
+            );
+            if (existing.length > 0) {
+                throw new ApiError(400, 'Mã nhà phân phối không tồn tại');
+            }
             // Chèn thuốc mới
             
             await connection.query(
-                'INSERT INTO thuoc (maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc) VALUES (?, ?, ?, ?, ?, ?)',
-                [maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc]
+                'INSERT INTO thuoc (maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc) VALUES (?, ?, ?, ?, ?, ?)',
+                [maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc]
             );
     
             // Trả về thông tin bệnh nhân
-            return { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc};
+            return { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc};
         } catch (error) {
             // Xử lý lỗi nếu có
             if (error.code === 'ER_DUP_ENTRY') {
@@ -36,6 +42,9 @@ class DrugService {
             }
             if (error.code === 'ER_BAD_FIELD_ERROR') {
                 throw new ApiError(400, 'Trường dữ liệu không hợp lệ');
+            }
+            if (error.code === 'ER_NO_REFERENCED_ROW') {  
+                throw new ApiError(400, 'Mã nhà phân phối không tồn tại');
             }
             // Log lỗi và ném ra ApiError   
             console.error('Lỗi khi thêm thuốc:', error);
@@ -54,6 +63,10 @@ class DrugService {
             if(filter.xoa) {
                 conditions.push('xoa = ?');
                 values.push(filter.xoa);
+            }
+            if(filter.maNPP) {
+                conditions.push('maNPP = ?');
+                values.push(filter.maNPP);
             }
             let query = 'SELECT * FROM thuoc';
             if (conditions.length > 0) {
@@ -104,23 +117,26 @@ class DrugService {
     async update(id, payload) {
         const connection = await this.pool.getConnection();
         try {
-            const { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc, xoa } = payload;
+            const { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, xoa } = payload;
 
             const query = `
                 UPDATE thuoc
-                SET tenThuoc = ?, soluongThuoc = ?, donvitinhThuoc = ?, noisanxuatThuoc = ?, soluong_minThuoc = ?, xoa = ?
+                SET tenThuoc = ?, soluongThuoc = ?, donvitinhThuoc = ?, maNPP = ?, soluong_minThuoc = ?, xoa = ?
                 WHERE maThuoc = ?
             `;
-            const params = [tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc, xoa, id];
+            const params = [tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, xoa, id];
             const [result] = await connection.query(query, params);
             
             if (result.affectedRows === 0) {
                 throw new ApiError(404, 'Không tìm thấy thuốc với ID: ' + id);
             }
             // Trả về thông tin thuốc đã cập nhật   
-            return { maThuoc: id, tenThuoc, soluongThuoc, donvitinhThuoc, noisanxuatThuoc, soluong_minThuoc, xoa };
+            return { maThuoc: id, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, xoa };
             
         } catch (error) {
+            if (error.code === 'ER_NO_REFERENCED') {
+                throw new ApiError(400, 'Mã NPP không tồn tại');
+            }
             console.error('Lỗi khi cập nhật thuốc:', error);
             throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi cập nhật thuốc');
         } finally {
