@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 const ApiError = require('../api-error');
 
-class InvoiceService {
+class LogService {
     constructor(client) {
         this.pool = client; // client là một pool kết nối MySQL
     }
@@ -34,35 +34,47 @@ class InvoiceService {
         return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
     }
 
-    async addInvoice(invoice) {
+    async addLog(log) {
         const connection = await this.pool.getConnection();
         try {
-            const { maHD, maNPP, ngaynhap, tongtien} = invoice;
-            
+            const {maNPP, ngaygoi} = log;
             // Kiểm tra maNPP tồn tại
             const [existingRecord] = await connection.query(
-                'SELECT maNPP FROM nhaphanphoi WHERE maNPP = ?',
+                `SELECT maNPP FROM nhaphanphoi WHERE maNPP = ?`,
                 [maNPP]
             );
+
             if (existingRecord.length === 0) {
                 throw new ApiError(400, 'Mã nhà phân phối không tồn tại');
             }
            
             // Chuyển đổi định dạng ngày
-            const formattedDate = this.formatDateToMySQL(ngaynhap);
-    
+            const formattedDate = this.formatDateToMySQL(ngaygoi);
+
+            // Sinh maBN
+            const [lastLog] = await connection.query(
+                'SELECT maNK FROM nhatkidathang ORDER BY maNK DESC LIMIT 1'
+            );
+            let maNK;
+            if (lastLog.length === 0) {
+                maNK = 'NK0000001';
+            } else {
+                const lastId = parseInt(lastLog[0].maNK.replace('NK', ''));
+                maNK = `NK${String(lastId + 1).padStart(7, '0')}`;
+            }
+
             // Chèn hóa đơn mới
             await connection.query(
-                'INSERT INTO hoadonnhap (maHD, maNPP, ngaynhap, tongtien) VALUES (?, ?, ?, ?)',
-                [maHD, maNPP, formattedDate, tongtien]
+                'INSERT INTO nhatkidathang (maNK, maNPP, ngaygoi) VALUES (?, ?, ?)',
+                [maNK, maNPP, formattedDate]
             );
             
             // Trả về thông tin hóa đơn nhập
-            return { maHD, maNPP, ngaynhap: formattedDate, tongtien};
+            return { maNK, maNPP, ngaynhap: formattedDate};
         } catch (error) {
             // Xử lý lỗi và trả về thông báo lỗi
             if (error.code === 'ER_DUP_ENTRY') {
-                throw new ApiError(400, 'Mã hóa đơn đã tồn tại');
+                throw new ApiError(400, 'Mã nhật kí đã tồn tại');
             }
             if (error.code === 'ER_BAD_FIELD_ERROR') {
                 throw new ApiError(400, 'Trường dữ liệu không hợp lệ');
@@ -71,8 +83,8 @@ class InvoiceService {
                 throw new ApiError(400, 'Mã nhà phân phối không tồn tại');
             }
             // Log lỗi và ném ra ApiError       
-            console.error('Lỗi khi thêm hóa đơn nhập:', error);
-            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm hóa đơn nhập');
+            console.error('Lỗi khi thêm nhật kí đặt hàng:', error);
+            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm nhật kí đặt hàng');
         } finally {
             // Giải phóng kết nối
             connection.release();
@@ -83,7 +95,7 @@ class InvoiceService {
         const connection = await this.pool.getConnection();
         try {
              // Xây dựng truy vấn SQL
-            let query = 'SELECT * FROM hoadonnhap';
+            let query = 'SELECT * FROM nhatkidathang';
             let params = [];
 
             // Thêm điều kiện vào truy vấn nếu có bộ lọc
@@ -94,12 +106,8 @@ class InvoiceService {
                     params.push(filter.maNPP);
                 }
                 if (filter.ngaynhap) {
-                    conditions.push('ngaynhap = ?');
+                    conditions.push('ngaygoi = ?');
                     params.push(filter.ngaynhap);
-                }
-                if (filter.tongtien) {
-                    conditions.push('tongtien = ?');
-                    params.push(filter.tongtien);
                 }
                 if (filter.xoa) {
                     conditions.push('xoa = ?');
@@ -116,8 +124,8 @@ class InvoiceService {
             return rows;
             
         } catch (error) {
-            console.error('Lỗi khi tìm kiếm hóa đơn nhập:', error);
-            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi tìm kiếm hóa đơn nhập');
+            console.error('Lỗi khi tìm kiếm nhật kí đặt hàng:', error);
+            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi tìm kiếm nhật kí đặt hàng');
         } finally {
             connection.release();
         }
@@ -126,15 +134,15 @@ class InvoiceService {
     async findById(id) {
         const connection = await this.pool.getConnection();
         try {
-            const query = 'SELECT * FROM hoadonnhap WHERE xoa = 0 AND maHD = ?';
+            const query = 'SELECT * FROM nhatkidathang WHERE maNK = ?';
             const [rows] = await connection.query(query, [id]);
             if (rows.length === 0) {
-                throw new ApiError(404, 'Không tìm thấy hóa đơn nhập với ID: ' + id);
+                throw new ApiError(404, 'Không tìm thấy nhật kí đặt hàng với ID: ' + id);
             }
             return rows[0];
         } catch (error) {
-            console.error('Lỗi khi tìm kiếm hóa đơn nhập theo ID:', error);
-            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi tìm kiếm hóa đơn nhập theo ID');
+            console.error('Lỗi khi tìm kiếm nhật kí đặt hàng theo ID:', error);
+            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi tìm kiếm nhật kí đặt hàng theo ID');
         } finally {
             connection.release();
         }
@@ -144,29 +152,29 @@ class InvoiceService {
         const connection = await this.pool.getConnection();
         try {
             // Lấy các trường từ payload
-            const {maNPP, ngaynhap, tongtien, xoa} = payload;
+            const {maNPP, ngaygoi} = payload;
             // Chuyển đổi định dạng ngày
-            const formattedDate = this.formatDateToMySQL(ngaynhap);
+            const formattedDate = this.formatDateToMySQL(ngaygoi);
             // Cập nhật hồ sơ lần khám
             const query = `
-                UPDATE hoadonnhap
-                SET maNPP = ?, ngaynhap = ?, tongtien = ?, xoa = ?, 
-                WHERE maHD = ?
+                UPDATE nhatkidathang
+                SET maNPP = ?, ngaygoi = ?
+                WHERE maNK = ?
             `;
-            const params = [maNPP, formattedDate, tongtien, xoa, id];
+            const params = [maNPP, formattedDate, id];
             
             const [result] = await connection.query(query, params);
             // Kiểm tra xem có bản ghi nào bị ảnh hưởng không
             if (result.affectedRows === 0) {
-                throw new ApiError(404, 'Không tìm thấy hóa đơn nhập với ID: ' + id);
+                throw new ApiError(404, 'Không tìm thấy nhật kí đặt hàng với ID: ' + id);
             }
             
             // Trả về thông tin hóa đơn nhập đã cập nhật
-            return { maHD: id, ngaynhap: formattedDate, tongtien, xoa };
+            return { maHD: id, ngaygoi: formattedDate };
         } catch (error) {
             // Xử lý lỗi và trả về thông báo lỗi
             if (error.code === 'ER_DUP_ENTRY') {
-                throw new ApiError(400, 'Mã hóa đơn nhập đã tồn tại');
+                throw new ApiError(400, 'Mã nhật kí đặt hàng đã tồn tại');
             }
             if (error.code === 'ER_BAD_FIELD_ERROR') {
                 throw new ApiError(400, 'Trường dữ liệu không hợp lệ');
@@ -175,8 +183,8 @@ class InvoiceService {
                 throw new ApiError(400, 'Mã NPP không tồn tại');
             }
             // Log lỗi và ném ra ApiError
-            console.error('Lỗi khi cập nhật hóa đơn nhập:', error);
-            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi cập nhật hóa đơn nhập');
+            console.error('Lỗi khi cập nhật nhật kí đặt hàng:', error);
+            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi cập nhật nhật kí đặt hàng');
         } finally {
             connection.release();
         }
@@ -190,16 +198,16 @@ class InvoiceService {
                 throw new ApiError(400, 'ID không được để trống');
             }
 
-            const query = 'DELETE FROM hoadonnhap WHERE maHD = ?';
+            const query = 'DELETE FROM nhatkidathang WHERE maNK = ?';
 
             const [result] = await connection.query(query, [id]);
             if (result.affectedRows === 0) {
-                throw error instanceof ApiError ? error : new ApiError(404, 'Không tìm thấy hóa đơn nhập với ID: ' + id);
+                throw error instanceof ApiError ? error : new ApiError(404, 'Không tìm thấy nhatkidathang với ID: ' + id);
             }
-            return { message: 'hóa đơn nhập đã được xóa thành công' };
+            return { message: 'nhatkidathang đã được xóa thành công' };
         } catch (error) {
-            console.error('Lỗi khi xóa hóa đơn nhập:', error);
-            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa hóa đơn nhập');
+            console.error('Lỗi khi xóa nhatkidathang:', error);
+            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa nhatkidathang');
         } finally {
             connection.release();
         }
@@ -209,12 +217,12 @@ class InvoiceService {
         const connection = await this.pool.getConnection();
         try {
             // Xóa tất cả hóa đơn nhập
-            const query = 'DELETE FROM hoadonnhap';
+            const query = 'DELETE FROM nhatkidathang';
             const [result] = await connection.query(query);
-            return { message: `${result.affectedRows} hóa đơn nhập đã được xóa thành công` };
+            return { message: `${result.affectedRows} nhatkidathang đã được xóa thành công` };
         } catch (error) {
-            console.error('Lỗi khi xóa tất cả hóa đơn nhập:', error);
-            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa tất cả hóa đơn nhập');
+            console.error('Lỗi khi xóa tất cả nhatkidathang:', error);
+            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa tất cả nhatkidathang');
         } finally {
             connection.release();
         }
@@ -222,4 +230,4 @@ class InvoiceService {
 
 }
 
-module.exports = InvoiceService;
+module.exports = LogService;

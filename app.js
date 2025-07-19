@@ -14,6 +14,8 @@ const examinationRoutes = require('./app/routes/examination.route'); // Nhập r
 const distributorRoutes = require('./app/routes/distributor.route'); // Nhập route nhà phân phối
 const invoiceRoutes = require('./app/routes/invoice.route'); // Nhập route hóa đơn nhập
 const invoice_detailsRoutes = require('./app/routes/invoice_details.route'); // Nhập route chi tiết hóa đơn nhập
+const logRoutes = require('./app/routes/log.route');
+const log_detailsRoutes = require('./app/routes/log_details.route');
 
 const emailRouter = require('./app/routes/email.route'); // Import router email
 
@@ -42,6 +44,8 @@ app.use('/api/examinations', examinationRoutes); // API quản lý khám bệnh
 app.use('/api/distributors', distributorRoutes); // API quản lý khám bệnh
 app.use('/api/invoices', invoiceRoutes); // API quản lý khám bệnh
 app.use('/api/invoice_details', invoice_detailsRoutes); // API quản lý khám bệnh
+app.use('/api/logs', logRoutes); // API quản lý khám bệnh
+app.use('/api/log_details', log_detailsRoutes); // API quản lý khám bệnh
 app.use('/api/email', emailRouter);  // API gửi email sẽ có đường dẫn: /api/email/send
 
 

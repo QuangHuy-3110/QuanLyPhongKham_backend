@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 const ApiError = require('../api-error');
 
-class Invoice_detailsService {
+class Log_detailsService {
     constructor(client) {
         this.pool = client; // client là một pool kết nối MySQL
     }
@@ -34,18 +34,18 @@ class Invoice_detailsService {
         return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
     }
 
-    async addInvoice_detail(invoice) {
+    async addLog_detail(log) {
         const connection = await this.pool.getConnection();
         try {
-            const { maHD, maThuoc, soluong, donvitinh, dongia, thanhtien} = invoice;
+            const { maNK, maThuoc, soluong, donvitinh} = log;
             
             // Kiểm tra maHD tồn tại
             const [existingRecord] = await connection.query(
-                'SELECT maHD FROM hoadonnhap WHERE maHD = ?',
-                [maHD]
+                'SELECT maNK FROM nhatkidathang WHERE maNK = ?',
+                [maNK]
             );
             if (existingRecord.length === 0) {
-                throw new ApiError(400, 'Mã hóa đơn không tồn tại');
+                throw new ApiError(400, 'Nhật kí đặt hàng không tồn tại');
             }
 
             // Kiểm tra maThuoc tồn tại
@@ -54,34 +54,34 @@ class Invoice_detailsService {
                 [maThuoc]
             );
             if (existingDrug.length === 0) {
-                throw new ApiError(400, 'Mã hóa đơn không tồn tại');
+                throw new ApiError(400, 'Mã thuốc không tồn tại');
             }
-           
+
             // Chèn chi tiết hóa đơn mới
             await connection.query(
-                'INSERT INTO chitiethoadon (maHD, maThuoc, soluong, donvitinh, dongia, thanhtien) VALUES (?, ?, ?, ?, ?, ?)',
-                [maHD, maThuoc, soluong, donvitinh, dongia, thanhtien]
+                'INSERT INTO chitietnhatki (maNK, maThuoc, soluong, donvitinh) VALUES (?, ?, ?, ?)',
+                [maNK, maThuoc, soluong, donvitinh]
             );
             
             // Trả về thông tin hóa đơn nhập
-            return { maHD, maThuoc, soluong, donvitinh, dongia, thanhtien};
+            return { maNK, maThuoc, soluong, donvitinh};
         } catch (error) {
             // Xử lý lỗi và trả về thông báo lỗi
             if (error.code === 'ER_DUP_ENTRY') {
-                throw new ApiError(400, 'chitiethoadon đã tồn tại');
+                throw new ApiError(400, 'chitietnhatki đã tồn tại');
             }
             if (error.code === 'ER_BAD_FIELD_ERROR') {
                 throw new ApiError(400, 'Trường dữ liệu không hợp lệ');
             }
             if (error.code === 'ER_NO_REFERENCED_ROW_2') {  
-                throw new ApiError(400, 'Mã hóa đơn không tồn tại');
+                throw new ApiError(400, 'Mã nhật kí không tồn tại');
             }
             if (error.code === 'ER_NO_REFERENCED_ROW') {  
                 throw new ApiError(400, 'Mã thuốc không tồn tại');
             }
             // Log lỗi và ném ra ApiError       
-            console.error('Lỗi khi thêm chi tiết hóa đơn:', error);
-            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm chi tiết hóa đơn');
+            console.error('Lỗi khi thêm chi tiết nhật kí:', error);
+            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm chi tiết nhật kí');
         } finally {
             // Giải phóng kết nối
             connection.release();
@@ -92,31 +92,23 @@ class Invoice_detailsService {
         const connection = await this.pool.getConnection();
         try {
              // Xây dựng truy vấn SQL
-            let query = 'SELECT * FROM chitiethoadon';
+            let query = 'SELECT * FROM chitietnhatki';
             let params = [];
 
             // Thêm điều kiện vào truy vấn nếu có bộ lọc
             if (filter) {
                 const conditions = [];
-                if (filter.maHD) {
-                    conditions.push('maHD = ?');
-                    params.push(filter.maHD);
+                if (filter.maNK) {
+                    conditions.push('maNK = ?');
+                    params.push(filter.maNK);
                 }
                 if (filter.maThuoc) {
                     conditions.push('maThuoc = ?');
                     params.push(filter.maThuoc);
                 }
-                if (filter.dongia) {
-                    conditions.push('dongia = ?');
-                    params.push(filter.dongia);
-                }
                 if (filter.donvitinh) {
                     conditions.push('donvitinh = ?');
                     params.push(filter.donvitinh);
-                }
-                if (filter.xoa) {
-                    conditions.push('xoa = ?');
-                    params.push(filter.xoa);
                 }
 
                 if (conditions.length > 0) {
@@ -136,97 +128,97 @@ class Invoice_detailsService {
         }
     }
 
-    async findById({maHD, maThuoc}) {
+    async findById({maNK, maThuoc}) {
         const connection = await this.pool.getConnection();
         try {
-            const query = 'SELECT * FROM chitiethoadon WHERE xoa = 0 AND maHD = ? AND maThuoc = ?';
-            const [rows] = await connection.query(query, [maHD, maThuoc]);
+            const query = 'SELECT * FROM chitietnhatki WHERE maNK = ? AND maThuoc = ?';
+            const [rows] = await connection.query(query, [maNK, maThuoc]);
             if (rows.length === 0) {
-                throw new ApiError(404, 'Không tìm thấy chi tiết hóa đơn với ID: ' + id);
+                throw new ApiError(404, 'Không tìm thấy chi tiết nhật kí với ID: ' + maNK, maThuoc);
             }
             return rows[0];
         } catch (error) {
-            console.error('Lỗi khi tìm kiếm chi tiết hóa đơn theo ID:', error);
-            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi tìm kiếm chi tiết hóa đơn theo ID');
+            console.error('Lỗi khi tìm kiếm chi tiết nhật kí theo ID:', error);
+            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi tìm kiếm chi tiết nhật kí theo ID');
         } finally {
             connection.release();
         }
     }
 
-    async update({maHD, maThuoc}, payload) {
+    async update({maNK, maThuoc}, payload) {
         const connection = await this.pool.getConnection();
         try {
             // Lấy các trường từ payload
-            const {soluong, donvitinh, dongia, thanhtien, xoa} = payload;
+            const {soluong, donvitinh} = payload;
             // Cập nhật hồ sơ lần khám
             const query = `
-                UPDATE chitiethoadon
-                SET soluong = ?, donvitinh = ?, dongia = ?, thanhtien = ?, xoa = ?, 
-                WHERE maHD = ? AND maThuoc = ?
+                UPDATE chitietnhatki
+                SET soluong = ?, donvitinh = ?
+                WHERE maNK = ? AND maThuoc = ?
             `;
-            const params = [soluong, donvitinh, dongia, thanhtien, xoa, maHD, maThuoc];
+            const params = [soluong, donvitinh, maNK, maThuoc];
             
             const [result] = await connection.query(query, params);
             // Kiểm tra xem có bản ghi nào bị ảnh hưởng không
             if (result.affectedRows === 0) {
-                throw new ApiError(404, 'Không tìm thấy chitiethoadon với ID: ' + id);
+                throw new ApiError(404, 'Không tìm thấy chi tiết nhật kí với ID: ' + id);
             }
             
             // Trả về thông tin chi tiết hóa đơn đã cập nhật
-            return { soluong, donvitinh, dongia, thanhtien, xoa, maHD, maThuoc };
+            return { soluong, donvitinh, maNK, maThuoc };
         } catch (error) {
             // Xử lý lỗi và trả về thông báo lỗi
             if (error.code === 'ER_DUP_ENTRY') {
-                throw new ApiError(400, 'Mã chi tiết hóa đơn đã tồn tại');
+                throw new ApiError(400, 'Mã chi tiết nhật kí đã tồn tại');
             }
             if (error.code === 'ER_BAD_FIELD_ERROR') {
                 throw new ApiError(400, 'Trường dữ liệu không hợp lệ');
             }
             if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-                throw new ApiError(400, 'Mã hóa đơn không tồn tại');
+                throw new ApiError(400, 'Mã nhật kí đặt hàng không tồn tại');
             }
             if (error.code === 'ER_NO_REFERENCED_ROW') {
                 throw new ApiError(400, 'Mã thuốc không tồn tại');
             }
             // Log lỗi và ném ra ApiError
-            console.error('Lỗi khi cập nhật chi tiết hóa đơn:', error);
-            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi cập nhật chi tiết hóa đơn');
+            console.error('Lỗi khi cập nhật chi tiết nhật kí:', error);
+            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi cập nhật chi tiết nhật kí');
         } finally {
             connection.release();
         }
     }
 
-    async delete({ maHD, maThuoc }) {
+    async delete({ maNK, maThuoc }) {
         const connection = await this.pool.getConnection();
         try {
             // Kiểm tra maLanKham và maThuoc
-            if (!maHD|| !maThuoc) {
-                throw new ApiError(400, 'maHD và maThuoc không được để trống');
+            if (!maNK|| !maThuoc) {
+                throw new ApiError(400, 'maNK và maThuoc không được để trống');
             }
-            if (typeof maHD !== 'string' || typeof maThuoc !== 'string') {
-                throw new ApiError(400, 'maHD và maThuoc phải là chuỗi');
+            if (typeof maNK !== 'string' || typeof maThuoc !== 'string') {
+                throw new ApiError(400, 'maNK và maThuoc phải là chuỗi');
             }
             // Xóa hồ sơ lần khám
-            const query = 'DELETE FROM chitiethoadon WHERE maHD = ? AND maThuoc = ?';
-            const [result] = await connection.query(query, [maHD, maThuoc]);
+            const query = 'DELETE FROM chitietnhatki WHERE maNK = ? AND maThuoc = ?';
+            const [result] = await connection.query(query, [maNK, maThuoc]);
             if (result.affectedRows === 0) {
-                throw new ApiError(404, `Không tìm thấy chitiethoadon với maHD: ${maHD} và maThuoc: ${maThuoc}`);
+                throw new ApiError(404, `Không tìm thấy chitietnhatki với maNK: ${maNK} và maThuoc: ${maThuoc}`);
             }
-            return { message: 'chitiethoadon đã được xóa thành công' };
+            return { message: 'chitietnhatki đã được xóa thành công' };
         } catch (error) {
             // Xử lý lỗi và trả về thông báo lỗi
             if (error.code === 'ER_BAD_FIELD_ERROR') {
                 throw new ApiError(400, 'Trường dữ liệu không hợp lệ');
             }
             if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-                throw new ApiError(400, 'Mã hóa đơn không tồn tại');
+                throw new ApiError(400, 'Mã nhật kí không tồn tại');
             }
             if (error.code === 'ER_NO_REFERENCED_ROW') {
                 throw new ApiError(400, 'Mã thuốc không tồn tại');
             }
             // Log lỗi và ném ra ApiError
-            console.error('Lỗi khi xóa chitiethoadon:', error); 
-            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa chitiethoadon');
+            console.error('Lỗi khi xóa chitietnhatki:', error); 
+            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa chitietnhatki');
         } finally {
             connection.release();
         }
@@ -236,16 +228,16 @@ class Invoice_detailsService {
         const connection = await this.pool.getConnection();
         try {
             // Kiểm tra xem có hồ sơ lần khám nào không
-            const [rows] = await connection.query('SELECT COUNT(*) AS count FROM chitiethoadon');
+            const [rows] = await connection.query('SELECT COUNT(*) AS count FROM chitietnhatki');
             if (rows[0].count === 0) {
-                throw new ApiError(400, 'Không có chitiethoadon nào để xóa');
+                throw new ApiError(400, 'Không có chitietnhatki nào để xóa');
             }
-            const query = 'DELETE FROM chitiethoadon';
+            const query = 'DELETE FROM chitietnhatki';
             const [result] = await connection.query(query);
-            return { message: `${result.affectedRows} chitiethoadon đã được xóa thành công` };
+            return { message: `${result.affectedRows} chitietnhatki đã được xóa thành công` };
         } catch (error) {
-            console.error('Lỗi khi kiểm tra số lượng chitiethoadon:', error);
-            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi kiểm tra số lượng chitiethoadon');
+            console.error('Lỗi khi kiểm tra số lượng chitietnhatki:', error);
+            throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi kiểm tra số lượng chitietnhatki');
         } finally {
             connection.release();
         }
@@ -253,4 +245,4 @@ class Invoice_detailsService {
 
 }
 
-module.exports = Invoice_detailsService;
+module.exports = Log_detailsService;

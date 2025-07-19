@@ -148,7 +148,7 @@ class WorkingTimeService {
                 throw new ApiError(404, `Không tìm thấy thời gian khám với maBS: ${maBS}, ngày: ${ngaythangnam} và giờ bắt đầu: ${giobatdau}`);
             }
             // Cập nhật thông tin thời gian khám
-            const query = 'UPDATE thoigiankham SET ? WHERE maBS = ? AND ngaythangnam = ? AND giobatdau = ? ';
+            const query = 'UPDATE thoigiankham SET ? WHERE maBS = ? AND ngaythangnam = ? AND giobatdau = ?';
             const [result] = await connection.query(query, [payload, maBS, ngaythangnam, giobatdau]);
             if (result.affectedRows === 0) {
                 throw new ApiError(404, `Không tìm thấy thời gian khám để cập nhật với maBS: ${maBS}, ngày: ${ngaythangnam} và giờ bắt đầu: ${giobatdau}`);

@@ -9,7 +9,7 @@ class DrugService {
     async addDrug(drug) {
         const connection = await this.pool.getConnection();
         try {
-            const { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc } = drug;
+            const { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, giaThuoc } = drug;
 
             // Kiểm tra cccdBS đã tồn tại
             const [existing] = await connection.query(
@@ -29,12 +29,12 @@ class DrugService {
             // Chèn thuốc mới
             
             await connection.query(
-                'INSERT INTO thuoc (maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc) VALUES (?, ?, ?, ?, ?, ?)',
-                [maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc]
+                'INSERT INTO thuoc (maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, giaThuoc) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, giaThuoc]
             );
     
             // Trả về thông tin bệnh nhân
-            return { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc};
+            return { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, giaThuoc};
         } catch (error) {
             // Xử lý lỗi nếu có
             if (error.code === 'ER_DUP_ENTRY') {
@@ -117,21 +117,21 @@ class DrugService {
     async update(id, payload) {
         const connection = await this.pool.getConnection();
         try {
-            const { maThuoc, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, xoa } = payload;
+            const { tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, giaThuoc, xoa } = payload;
 
             const query = `
                 UPDATE thuoc
-                SET tenThuoc = ?, soluongThuoc = ?, donvitinhThuoc = ?, maNPP = ?, soluong_minThuoc = ?, xoa = ?
+                SET tenThuoc = ?, soluongThuoc = ?, donvitinhThuoc = ?, maNPP = ?, soluong_minThuoc = ?, giaThuoc = ?, xoa = ?
                 WHERE maThuoc = ?
             `;
-            const params = [tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, xoa, id];
+            const params = [tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, giaThuoc, xoa, id];
             const [result] = await connection.query(query, params);
             
             if (result.affectedRows === 0) {
                 throw new ApiError(404, 'Không tìm thấy thuốc với ID: ' + id);
             }
             // Trả về thông tin thuốc đã cập nhật   
-            return { maThuoc: id, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, xoa };
+            return { maThuoc: id, tenThuoc, soluongThuoc, donvitinhThuoc, maNPP, soluong_minThuoc, giaThuoc, xoa };
             
         } catch (error) {
             if (error.code === 'ER_NO_REFERENCED') {

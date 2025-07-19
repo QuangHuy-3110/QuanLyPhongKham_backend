@@ -38,7 +38,7 @@ class ExaminationService {
         const connection = await this.pool.getConnection();
         try {
             const { trieuchung, thutuckham, chuandoan, lieutrinhdieutri, 
-                    ngaytaikham, ngaythangnamkham, maHS , stt_lankham, maBS} = examination;
+                    ngaytaikham, ngaythangnamkham, maHS , stt_lankham, maBS, tongtien} = examination;
             
             // Kiểm tra maHS đã tồn tại
             const [existingRecord] = await connection.query(
@@ -74,13 +74,13 @@ class ExaminationService {
     
             // Chèn hồ sơ bệnh nhân mới
             await connection.query(
-                'INSERT INTO lankham (maLanKham, trieuchung, thutuckham, chuandoan, lieutrinhdieutri, ngaytaikham, ngaythangnamkham, maHS, stt_lankham, maBS) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [maLanKham, trieuchung, thutuckham, chuandoan, lieutrinhdieutri, formattedNgayTaiKham, formattedDate, maHS, stt_lankham, maBS]
+                'INSERT INTO lankham (maLanKham, trieuchung, thutuckham, chuandoan, lieutrinhdieutri, ngaytaikham, ngaythangnamkham, maHS, stt_lankham, maBS, tongtien) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [maLanKham, trieuchung, thutuckham, chuandoan, lieutrinhdieutri, formattedNgayTaiKham, formattedDate, maHS, stt_lankham, maBS, tongtien]
             );
             
             // Trả về thông tin hồ sơ lần khám
             return { maLanKham, trieuchung, thutuckham, chuandoan, lieutrinhdieutri,
-                    ngaytaikham: formattedNgayTaiKham, ngaythangnamkham: formattedDate, maHS, stt_lankham, maBS };
+                    ngaytaikham: formattedNgayTaiKham, ngaythangnamkham: formattedDate, maHS, stt_lankham, maBS, tongtien };
         } catch (error) {
             // Xử lý lỗi và trả về thông báo lỗi
             if (error.code === 'ER_DUP_ENTRY') {
@@ -170,7 +170,7 @@ class ExaminationService {
         try {
             // Lấy các trường từ payload
             const {trieuchung, thutuckham, chuandoan, lieutrinhdieutri, 
-                    ngaytaikham, ngaythangnamkham, maHS , stt_lankham, maBS, xoa} = payload;
+                    ngaytaikham, ngaythangnamkham, maHS , stt_lankham, maBS, tongtien, xoa} = payload;
             // Chuyển đổi định dạng ngày
             const formattedDate = this.formatDateToMySQL(ngaythangnamkham);
             const formattedNgayTaiKham = this.formatDateToMySQL(ngaytaikham);
@@ -178,11 +178,11 @@ class ExaminationService {
             const query = `
                 UPDATE lankham
                 SET trieuchung = ?, thutuckham = ?, chuandoan = ?, lieutrinhdieutri = ?, 
-                    ngaytaikham = ?, ngaythangnamkham = ?, maHS = ?, stt_lankham = ?, maBS = ?, xoa = 0
+                    ngaytaikham = ?, ngaythangnamkham = ?, maHS = ?, stt_lankham = ?, maBS = ?, tongtien = ?, xoa = ?
                 WHERE maLanKham = ?
             `;
             const params = [trieuchung, thutuckham, chuandoan, lieutrinhdieutri,
-                            formattedNgayTaiKham, formattedDate, maHS, stt_lankham, maBS, xoa, id];
+                            formattedNgayTaiKham, formattedDate, maHS, stt_lankham, maBS, tongtien, xoa, id];
             
             const [result] = await connection.query(query, params);
             // Kiểm tra xem có bản ghi nào bị ảnh hưởng không
@@ -192,7 +192,7 @@ class ExaminationService {
             
             // Trả về thông tin hồ sơ lần khám đã cập nhật
             return { maLanKham: id, trieuchung, thutuckham, chuandoan, lieutrinhdieutri,
-                     ngaytaikham: formattedNgayTaiKham, ngaythangnamkham: formattedDate, maHS, stt_lankham, maBS, xoa };
+                     ngaytaikham: formattedNgayTaiKham, ngaythangnamkham: formattedDate, maHS, stt_lankham, maBS, tongtien, xoa };
         } catch (error) {
             // Xử lý lỗi và trả về thông báo lỗi
             if (error.code === 'ER_DUP_ENTRY') {
