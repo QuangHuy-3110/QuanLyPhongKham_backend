@@ -60,8 +60,12 @@ class DoctorService {
             if (lastDoctor.length === 0) {
                 maBS = 'BS0001';
             } else {
-                const lastId = parseInt(lastDoctor[0].maBS.replace('BS', ''));
-                maBS = `BS${String(lastId + 1).padStart(4, '0')}`;
+               const lastId = parseInt(lastDoctor[0].maBS.replace('BS', ''));
+                if (isNaN(lastId)) {
+                    maBS = 'BS0001'; // Gán bằng 1 nếu không phải số
+                } else {
+                    maBS = `BS${String(lastId + 1).padStart(4, '0')}`;
+                }
             }
     
             // Chuyển đổi định dạng ngày sinh
