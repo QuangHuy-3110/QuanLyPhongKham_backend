@@ -8,17 +8,12 @@ exports.create = async (req, res, next) => {
         const document = await invoiceService.addInvoice(req.body);
         return res.send(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next (
-            new ApiError(500, "An error occurred while creating the invoice")
-        );
+        // Truyền lỗi trực tiếp từ InvoiceService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm hóa đơn'));
     }
 }
 
 exports.findAll = async (req, res, next) => {
-    // let documents = [];
     try {
         const invoiceService = new InvoiceService(pool);
         let filter = {};
@@ -39,14 +34,11 @@ exports.findAll = async (req, res, next) => {
 
         // Gọi hàm find với bộ lọc
         const documents = await invoiceService.find(filter);
-        // return res.send(documents);
         return res.status(200).json(documents);
     } catch (error) {
-        return next(
-            new ApiError(500, 'An error occurred while retrieving invoice')
-        );
+        // Truyền lỗi trực tiếp từ InvoiceService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi lấy danh sách hóa đơn'));
     }
-     
 };
 
 exports.findOne = async (req, res, next) => {
@@ -57,16 +49,12 @@ exports.findOne = async (req, res, next) => {
         const invoiceService = new InvoiceService(pool);
         const document = await invoiceService.findById(req.params.id);
         if (!document) {
-            return next(new ApiError(404, 'invoice not found'));
+            return next(new ApiError(404, 'Hóa đơn không tìm thấy'));
         }
         return res.send(document);  
     } catch (error) {
-        return next(    
-            new ApiError(
-                500,    
-                `Error occurred while retrieving invoice with id=${req.params.id}`
-            )
-        );
+        // Truyền lỗi trực tiếp từ InvoiceService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi lấy thông tin hóa đơn với id=${req.params.id}`));
     }
 };
 
@@ -81,19 +69,12 @@ exports.update = async (req, res, next) => {
         const invoiceService = new InvoiceService(pool);
         const document = await invoiceService.update(req.params.id, req.body);
         if (!document) {
-            return next(new ApiError(404, 'invoice not found'));
+            return next(new ApiError(404, 'Hóa đơn không tìm thấy'));
         }
-        return res.send({message: 'invoice was updated successfully'});
+        return res.send({message: 'Hóa đơn được cập nhật thành công'});
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                `Error occurred while updating invoice with id=${req.params.id}`
-            )
-        );
+        // Truyền lỗi trực tiếp từ InvoiceService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi cập nhật hóa đơn với id=${req.params.id}`));
     }
 };
 
@@ -105,20 +86,12 @@ exports.delete = async (req, res, next) => {
         const invoiceService = new InvoiceService(pool);
         const document = await invoiceService.delete(req.params.id);       
         if (!document) {    
-            return next(new ApiError(404, 'invoice not found'));
+            return next(new ApiError(404, 'Hóa đơn không tìm thấy'));
         }
-        return res.send({message: 'invoice was deleted successfully'});
-    }
-    catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                `Error occurred while deleting invoice with id=${req.params.id}`
-            )
-        );  
+        return res.send({message: 'Hóa đơn được xóa thành công'});
+    } catch (error) {
+        // Truyền lỗi trực tiếp từ InvoiceService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi xóa hóa đơn với id=${req.params.id}`));
     }
 };
 
@@ -127,17 +100,13 @@ exports.deleteAll = async (req, res, next) => {
         const invoiceService = new InvoiceService(pool);
         const deletedCount = await invoiceService.deleteAll();
         if (deletedCount === 0) {
-            return next(new ApiError(404, 'No invoice found to delete'));
+            return next(new ApiError(404, 'Không tìm thấy hóa đơn để xóa'));
         }
         return res.send({
-            message: `${deletedCount} invoice were deleted successfully`
+            message: `${deletedCount} hóa đơn được xóa thành công`
         });
     } catch (error) {
-        return next(    
-            new ApiError(
-                500, 
-                'An error occurred while deleting invoice'
-            )
-        );
+        // Truyền lỗi trực tiếp từ InvoiceService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa tất cả hóa đơn'));
     }
 };

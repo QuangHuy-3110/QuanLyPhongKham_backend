@@ -203,6 +203,9 @@ class DoctorService {
             }
             return { maBS: id, cccdBS, tenBS, ngaysinhBS: formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, xoa };
         } catch (error) {
+            if (error.code === 'ER_DUP_ENTRY') {
+                throw new ApiError(400, 'Cccd bác sĩ đã tồn tại');
+            }
             console.error('Lỗi khi cập nhật bác sĩ:', error);
             throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi cập nhật bác sĩ');
         } finally {

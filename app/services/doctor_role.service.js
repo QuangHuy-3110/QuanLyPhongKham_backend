@@ -31,7 +31,7 @@ class DoctorRoleService {
             }
             // Kiểm tra xem mối quan hệ đã tồn tại chưa
             const [existingRelation] = await connection.query(  
-                'SELECT maBS, maCK FROM vaitrobacsi WHERE maBS = ? AND maCK = ?',
+                'SELECT maBS, maCK FROM chuyenmon WHERE maBS = ? AND maCK = ?',
                 [maBS, maCK]
             );
             if (existingRelation.length > 0) {
@@ -39,7 +39,7 @@ class DoctorRoleService {
             }
             // Chèn mối quan hệ bác sĩ - chuyên khoa mới
             await connection.query(
-                'INSERT INTO vaitrobacsi (maBS, maCK) VALUES (?, ?)',
+                'INSERT INTO chuyenmon (maBS, maCK) VALUES (?, ?)',
                 [maBS, maCK]
             );
             // Trả về thông tin mối quan hệ
@@ -76,10 +76,10 @@ class DoctorRoleService {
             }
             let query;
             if (filterConditions.length > 0) {
-                query = `SELECT * FROM vaitrobacsi WHERE ${filterConditions.join(' AND ')}`;
+                query = `SELECT * FROM chuyenmon WHERE ${filterConditions.join(' AND ')}`;
             } else {
                 // Nếu không có bộ lọc, lấy tất cả mối quan hệ
-                query = 'SELECT * FROM vaitrobacsi';
+                query = 'SELECT * FROM chuyenmon';
             }
             const [rows] = await connection.query(query, filterValues);
             return rows;
@@ -107,7 +107,7 @@ class DoctorRoleService {
             }
             // Truy vấn mối quan hệ bác sĩ - chuyên khoa
             const [rows] = await connection.query(
-                'SELECT * FROM vaitrobacsi WHERE maBS = ? AND maCK = ?',
+                'SELECT * FROM chuyenmon WHERE maBS = ? AND maCK = ?',
                 [maBS, maCK]
             );
             if (rows.length === 0) {
@@ -138,14 +138,14 @@ class DoctorRoleService {
             }
             // Kiểm tra xem mối quan hệ có tồn tại không
             const [existing] = await connection.query(
-                'SELECT * FROM vaitrobacsi WHERE maBS = ? AND maCK = ?',
+                'SELECT * FROM chuyenmon WHERE maBS = ? AND maCK = ?',
                 [maBS, maCK]
             );
             if (existing.length === 0) {
                 throw new ApiError(404, `Không tìm thấy mối quan hệ với maBS: ${maBS} và maCK: ${maCK}`);
             }
             // Cập nhật mối quan hệ bác sĩ - chuyên khoa
-            const query = 'UPDATE vaitrobacsi SET ? WHERE maBS = ? AND maCK = ?';
+            const query = 'UPDATE chuyenmon SET ? WHERE maBS = ? AND maCK = ?';
             const [result] = await connection.query(query, [payload, maBS, maCK]);
             if (result.affectedRows === 0) {
                 throw new ApiError(404, `Không tìm thấy mối quan hệ với maBS: ${maBS} và maCK: ${maCK}`);
@@ -175,14 +175,14 @@ class DoctorRoleService {
             }
             // Kiểm tra xem mối quan hệ có tồn tại không
             const [existing] = await connection.query(
-                'SELECT * FROM vaitrobacsi WHERE maBS = ? AND maCK = ?',
+                'SELECT * FROM chuyenmon WHERE maBS = ? AND maCK = ?',
                 [maBS, maCK]
             );
             if (existing.length === 0) {
                 throw new ApiError(404, `Không tìm thấy mối quan hệ với maBS: ${maBS} và maCK: ${maCK}`);
             }
             // Xóa mối quan hệ bác sĩ - chuyên khoa
-            const query = 'DELETE FROM vaitrobacsi WHERE maBS = ? AND maCK = ?';
+            const query = 'DELETE FROM chuyenmon WHERE maBS = ? AND maCK = ?';
             const [result] = await connection.query(query, [maBS, maCK]);
             if (result.affectedRows === 0) {
                 throw new ApiError(404, `Không tìm thấy mối quan hệ với maBS: ${maBS} và maCK: ${maCK}`);
@@ -204,7 +204,7 @@ class DoctorRoleService {
         const connection = await this.pool.getConnection();
         try {
             // Xóa tất cả mối quan hệ bác sĩ - chuyên khoa
-            const query = 'DELETE FROM vaitrobacsi';
+            const query = 'DELETE FROM chuyenmon';
             const [result] = await connection.query(query);
             if (result.affectedRows === 0) {
                 throw new ApiError(404, 'Không có mối quan hệ nào để xóa');

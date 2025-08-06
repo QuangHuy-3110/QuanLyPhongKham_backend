@@ -8,12 +8,8 @@ exports.create = async (req, res, next) => {
         const document = await appointmentService.addAppointment(req.body);
         return res.send(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next (
-            new ApiError(500, "An error occurred while creating the appointment")
-        );
+        // Truyền lỗi trực tiếp từ AppointmentService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm cuộc hẹn'));
     }
 }
 
@@ -42,9 +38,8 @@ exports.findAll = async (req, res, next) => {
         documents = await appointmentService.find(filter);
         return res.send(documents);
     } catch (error) {
-        return next(
-            new ApiError(500, 'An error occurred while retrieving appointment')
-        );
+        // Truyền lỗi trực tiếp từ AppointmentService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi lấy danh sách cuộc hẹn'));
     }
 };
 
@@ -57,15 +52,8 @@ exports.findOne = async (req, res, next) => {
         }
         return res.send(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,
-                `Error occurred while retrieving appointment with id=${req.params.id}`
-            )
-        );
+        // Truyền lỗi trực tiếp từ AppointmentService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi lấy thông tin cuộc hẹn với id=${req.params.id}`));
     }
 };
 
@@ -81,12 +69,8 @@ exports.update = async (req, res, next) => {
         }
         return res.send({message: 'Appointment was updated successfully'});
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(500, `Error occurred while updating appointment with id=${req.params.id}`)
-        );
+        // Truyền lỗi trực tiếp từ AppointmentService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi cập nhật cuộc hẹn với id=${req.params.id}`));
     }
 };
 
@@ -98,14 +82,9 @@ exports.delete = async (req, res, next) => {
             return next(new ApiError(404, 'Appointment not found'));
         }
         return res.send({message: 'Appointment was deleted successfully'});
-    }
-    catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(500, `Error occurred while deleting appointment with id=${req.params.id}`)
-        );
+    } catch (error) {
+        // Truyền lỗi trực tiếp từ AppointmentService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi xóa cuộc hẹn với id=${req.params.id}`));
     }
 };
 
@@ -117,11 +96,7 @@ exports.deleteAll = async (req, res, next) => {
             message: `${documents.deletedCount} appointments were deleted successfully`
         });
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(500, 'An error occurred while deleting all appointments')
-        );
+        // Truyền lỗi trực tiếp từ AppointmentService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa tất cả cuộc hẹn'));
     }
 };

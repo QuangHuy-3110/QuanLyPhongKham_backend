@@ -8,17 +8,12 @@ exports.create = async (req, res, next) => {
         const document = await logService.addLog(req.body);
         return res.send(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next (
-            new ApiError(500, "An error occurred while creating the log")
-        );
+        // Truyền lỗi trực tiếp từ LogService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm nhật ký đặt hàng'));
     }
 }
 
 exports.findAll = async (req, res, next) => {
-    // let documents = [];
     try {
         const logService = new LogService(pool);
         let filter = {};
@@ -32,14 +27,11 @@ exports.findAll = async (req, res, next) => {
         }
         // Gọi hàm find với bộ lọc
         const documents = await logService.find(filter);
-        // return res.send(documents);
         return res.status(200).json(documents);
     } catch (error) {
-        return next(
-            new ApiError(500, 'An error occurred while retrieving log')
-        );
+        // Truyền lỗi trực tiếp từ LogService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi lấy danh sách nhật ký đặt hàng'));
     }
-     
 };
 
 exports.findOne = async (req, res, next) => {
@@ -50,16 +42,12 @@ exports.findOne = async (req, res, next) => {
         const logService = new LogService(pool);
         const document = await logService.findById(req.params.id);
         if (!document) {
-            return next(new ApiError(404, 'log not found'));
+            return next(new ApiError(404, 'Nhật ký đặt hàng không tìm thấy'));
         }
         return res.send(document);  
     } catch (error) {
-        return next(    
-            new ApiError(
-                500,    
-                `Error occurred while retrieving log with id=${req.params.id}`
-            )
-        );
+        // Truyền lỗi trực tiếp từ LogService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi lấy thông tin nhật ký đặt hàng với id=${req.params.id}`));
     }
 };
 
@@ -74,19 +62,12 @@ exports.update = async (req, res, next) => {
         const logService = new LogService(pool);
         const document = await logService.update(req.params.id, req.body);
         if (!document) {
-            return next(new ApiError(404, 'log not found'));
+            return next(new ApiError(404, 'Nhật ký đặt hàng không tìm thấy'));
         }
-        return res.send({message: 'log was updated successfully'});
+        return res.send({message: 'Nhật ký đặt hàng được cập nhật thành công'});
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                `Error occurred while updating log with id=${req.params.id}`
-            )
-        );
+        // Truyền lỗi trực tiếp từ LogService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi cập nhật nhật ký đặt hàng với id=${req.params.id}`));
     }
 };
 
@@ -98,20 +79,12 @@ exports.delete = async (req, res, next) => {
         const logService = new LogService(pool);
         const document = await logService.delete(req.params.id);       
         if (!document) {    
-            return next(new ApiError(404, 'log not found'));
+            return next(new ApiError(404, 'Nhật ký đặt hàng không tìm thấy'));
         }
-        return res.send({message: 'log was deleted successfully'});
-    }
-    catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                `Error occurred while deleting log with id=${req.params.id}`
-            )
-        );  
+        return res.send({message: 'Nhật ký đặt hàng được xóa thành công'});
+    } catch (error) {
+        // Truyền lỗi trực tiếp từ LogService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi xóa nhật ký đặt hàng với id=${req.params.id}`));
     }
 };
 
@@ -120,17 +93,13 @@ exports.deleteAll = async (req, res, next) => {
         const logService = new LogService(pool);
         const deletedCount = await logService.deleteAll();
         if (deletedCount === 0) {
-            return next(new ApiError(404, 'No log found to delete'));
+            return next(new ApiError(404, 'Không tìm thấy nhật ký đặt hàng để xóa'));
         }
         return res.send({
-            message: `${deletedCount} log were deleted successfully`
+            message: `${deletedCount} nhật ký đặt hàng được xóa thành công`
         });
     } catch (error) {
-        return next(    
-            new ApiError(
-                500, 
-                'An error occurred while deleting log'
-            )
-        );
+        // Truyền lỗi trực tiếp từ LogService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa tất cả nhật ký đặt hàng'));
     }
 };

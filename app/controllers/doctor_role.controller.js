@@ -8,12 +8,8 @@ exports.create = async (req, res, next) => {
         const document = await doctor_roleService.addDoctorRole(req.body);
         return res.send(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next (
-            new ApiError( 500, "An error occurred while creating the record")
-        );
+        // Truyền lỗi trực tiếp từ DoctorRoleService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm mối quan hệ bác sĩ - chuyên khoa'));
     }
 }
 
@@ -37,15 +33,8 @@ exports.findAll = async (req, res, next) => {
         return res.status(200).json(documents);
     } catch (error) {
         console.error('Lỗi khi tìm kiếm mối quan hệ bác sĩ - chuyên khoa:', error);
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || 'Lỗi khi tìm kiếm mối quan hệ bác sĩ - chuyên khoa'
-            )
-        );
+        // Truyền lỗi trực tiếp từ DoctorRoleService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi lấy danh sách mối quan hệ bác sĩ - chuyên khoa'));
     }
 };
 
@@ -70,15 +59,8 @@ exports.findOne = async (req, res, next) => {
         return res.status(200).json(document);
     } catch (error) {
         console.error('Lỗi khi tìm kiếm mối quan hệ bác sĩ - chuyên khoa:', error);
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || 'Lỗi khi tìm kiếm mối quan hệ bác sĩ - chuyên khoa'
-            )
-        );
+        // Truyền lỗi trực tiếp từ DoctorRoleService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi lấy thông tin mối quan hệ bác sĩ - chuyên khoa với maBS=${req.params.maBS} và maCK=${req.query.maCK}`));
     }
 };
 
@@ -106,15 +88,8 @@ exports.update = async (req, res, next) => {
         return res.status(200).json(updatedDocument);
     } catch (error) {
         console.error('Lỗi khi cập nhật mối quan hệ bác sĩ - chuyên khoa:', error);
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || 'Lỗi khi cập nhật mối quan hệ bác sĩ - chuyên khoa'
-            )
-        );
+        // Truyền lỗi trực tiếp từ DoctorRoleService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi cập nhật mối quan hệ bác sĩ - chuyên khoa với maBS=${req.params.maBS} và maCK=${req.query.maCK}`));
     }
 };
 
@@ -139,18 +114,10 @@ exports.delete = async (req, res, next) => {
         return res.status(200).json({
             message: `Mối quan hệ bác sĩ - chuyên khoa đã được xóa thành công`
         });
-    }
-    catch (error) {
+    } catch (error) {
         console.error('Lỗi khi xóa mối quan hệ bác sĩ - chuyên khoa:', error);
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || 'Lỗi khi xóa mối quan hệ bác sĩ - chuyên khoa'
-            )
-        );
+        // Truyền lỗi trực tiếp từ DoctorRoleService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi xóa mối quan hệ bác sĩ - chuyên khoa với maBS=${req.params.maBS} và maCK=${req.query.maCK}`));
     }
 };
 
@@ -168,14 +135,7 @@ exports.deleteAll = async (req, res, next) => {
         });
     } catch (error) {
         console.error('Lỗi khi xóa tất cả mối quan hệ bác sĩ - chuyên khoa:', error);
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || 'Lỗi khi xóa tất cả mối quan hệ bác sĩ - chuyên khoa'
-            )
-        );
+        // Truyền lỗi trực tiếp từ DoctorRoleService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa tất cả mối quan hệ bác sĩ - chuyên khoa'));
     }
 };

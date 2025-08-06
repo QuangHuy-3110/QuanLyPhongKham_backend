@@ -8,9 +8,8 @@ exports.create = async (req, res, next) => {
         const document = await patientService.addPatient(req.body);
         return res.send(document);
     } catch (error) {
-        return next (
-            new ApiError(500, "An error occurred while creating the patient")
-        );
+        // Truyền lỗi trực tiếp từ PatientService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm bệnh nhân'));
     }
 }
 
@@ -31,9 +30,8 @@ exports.findAll = async (req, res, next) => {
         
         return res.send(documents);
     } catch (error) {
-        return next(
-            new ApiError(500, 'An error occurred while retrieving patients')
-        );
+        // Truyền lỗi trực tiếp từ PatientService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi lấy danh sách bệnh nhân'));
     }
 };
 
@@ -46,12 +44,8 @@ exports.findOne = async (req, res, next) => {
         }
         return res.send(document);  
     } catch (error) {
-        return next(    
-            new ApiError(
-                500,    
-                `Error occurred while retrieving patient with id=${req.params.id}`
-            )
-        );
+        // Truyền lỗi trực tiếp từ PatientService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi lấy thông tin bệnh nhân với id=${req.params.id}`));
     }
 };
 
@@ -67,9 +61,8 @@ exports.update = async (req, res, next) => {
         }
         return res.send({message: 'Patient was updated successfully'});
     } catch (error) {
-        return next(
-            new ApiError(500, `Error occurred while updating patient with id=${req.params.id}`)
-        );
+        // Truyền lỗi trực tiếp từ PatientService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi cập nhật bệnh nhân với id=${req.params.id}`));
     }
 };
 
@@ -81,11 +74,9 @@ exports.delete = async (req, res, next) => {
             return next(new ApiError(404, 'Patient not found'));
         }
         return res.send({message: 'Patient was deleted successfully'}); 
-    }
-    catch (error) {
-        return next(
-            new ApiError(500, `Error occurred while deleting patient with id=${req.params.id}`)
-        );  
+    } catch (error) {
+        // Truyền lỗi trực tiếp từ PatientService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi xóa bệnh nhân với id=${req.params.id}`));
     }
 };
 
@@ -97,10 +88,7 @@ exports.deleteAll = async (req, res, next) => {
             message: `${deletedCount} patients were deleted successfully`
         });
     } catch (error) {
-        return next(    
-            new ApiError(500, 'An error occurred while deleting patients')
-        );
+        // Truyền lỗi trực tiếp từ PatientService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa tất cả bệnh nhân'));
     }
 };
-// This file is part of the backend application for managing patient records.
-// It provides the controller functions for handling HTTP requests related to patients.

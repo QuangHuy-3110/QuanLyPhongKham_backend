@@ -51,7 +51,7 @@ class DistributorService {
         } catch (error) {
             // Xử lý lỗi và trả về thông báo lỗi
             if (error.code === 'ER_DUP_ENTRY') {
-                throw new ApiError(400, 'Nhà phân phối đã tồn tại');
+                throw new ApiError(400, 'Mã nhà phân phối đã tồn tại');
             }
             if (error.code === 'ER_BAD_FIELD_ERROR') {
                 throw new ApiError(400, 'Trường dữ liệu không hợp lệ');

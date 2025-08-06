@@ -8,12 +8,8 @@ exports.create = async (req, res, next) => {
         const document = await invoice_detailsService.addInvoice_detail(req.body);
         return res.send(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next (
-            new ApiError(500, "An error occurred while creating the invoice_details")
-        );
+        // Truyền lỗi trực tiếp từ Invoice_detailsService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm chi tiết hóa đơn'));
     }
 }
 
@@ -47,50 +43,36 @@ exports.findAll = async (req, res, next) => {
 
         return res.status(200).json(documents);
     } catch (error) {
-        console.error('Lỗi khi tìm kiếm invoice_details:', error);
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || 'Lỗi khi tìm kiếm invoice_details'
-            )
-        );
+        console.error('Lỗi khi tìm kiếm chi tiết hóa đơn:', error);
+        // Truyền lỗi trực tiếp từ Invoice_detailsService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi lấy danh sách chi tiết hóa đơn'));
     }
 };
 
 exports.findOne = async (req, res, next) => {
     try {
-        const { maHD } = req.params; // Lấy maLanKham từ URL path
+        const { maHD } = req.params; // Lấy maHD từ URL path
         const { maThuoc } = req.query; // Lấy maThuoc từ query
         const invoice_detailsService = new Invoice_detailsService(pool);
 
-        // Kiểm tra xem maLanKham và maThuoc có được cung cấp không
+        // Kiểm tra xem maHD và maThuoc có được cung cấp không
         if (!maHD || !maThuoc) {
             return next(new ApiError(400, 'maHD và maThuoc là bắt buộc'));
         }
 
-        // Gọi hàm findById với đối tượng chứa maLanKham và maThuoc
+        // Gọi hàm findById với đối tượng chứa maHD và maThuoc
         const document = await invoice_detailsService.findById({ maHD, maThuoc });
 
         // Kiểm tra kết quả
         if (!document) {
-            return next(new ApiError(404, `Hóa đơn với maHD=${maHD} và maThuoc=${maThuoc} không tìm thấy`));
+            return next(new ApiError(404, `Chi tiết hóa đơn với maHD=${maHD} và maThuoc=${maThuoc} không tìm thấy`));
         }
 
         return res.status(200).json(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        console.error(`Lỗi khi tìm kiếm Hóa đơn với maHD=${req.query.maHD}, maThuoc=${req.query.maThuoc}:`, error);
-        return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || `Lỗi khi tìm kiếm Hóa đơn với maHD=${req.query.maHD} và maThuoc=${req.query.maThuoc}`
-            )
-        );
+        console.error(`Lỗi khi tìm kiếm chi tiết hóa đơn với maHD=${req.params.maHD}, maThuoc=${req.query.maThuoc}:`, error);
+        // Truyền lỗi trực tiếp từ Invoice_detailsService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi lấy thông tin chi tiết hóa đơn với maHD=${req.params.maHD} và maThuoc=${req.query.maThuoc}`));
     }
 };
 
@@ -99,59 +81,44 @@ exports.update = async (req, res, next) => {
         return next(new ApiError(400, 'Data to update can not be empty'));
     }
     try {
-        const { maHD } = req.params; // Lấy maLanKham từ URL path
+        const { maHD } = req.params; // Lấy maHD từ URL path
         const { maThuoc } = req.query; // Lấy maThuoc từ query
         const invoice_detailsService = new Invoice_detailsService(pool);
 
-        // Kiểm tra xem maLanKham và maThuoc có được cung cấp không
+        // Kiểm tra xem maHD và maThuoc có được cung cấp không
         if (!maHD || !maThuoc) {
             return next(new ApiError(400, 'maHD và maThuoc là bắt buộc'));
         }
         const document = await invoice_detailsService.update({maHD, maThuoc}, req.body);
         if (!document) {
-            return next(new ApiError(404, 'invoice_details not found'));
+            return next(new ApiError(404, 'Chi tiết hóa đơn không tìm thấy'));
         }
-        return res.send({message: 'invoice_details was updated successfully'});
+        return res.send({message: 'Chi tiết hóa đơn được cập nhật thành công'});
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                'Error occurred while updating invoice_details with maHD=' + maHD + ' and maThuoc=' + maThuoc
-            )
-        );
+        // Truyền lỗi trực tiếp từ Invoice_detailsService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi cập nhật chi tiết hóa đơn với maHD=${req.params.maHD} và maThuoc=${req.query.maThuoc}`));
     }
 };
 
 exports.delete = async (req, res, next) => {
     try {
-        const { maHD } = req.params; // Lấy maLanKham từ URL path
+        const { maHD } = req.params; // Lấy maHD từ URL path
         const { maThuoc } = req.query; // Lấy maThuoc từ query
         const invoice_detailsService = new Invoice_detailsService(pool);
-        // Kiểm tra xem maLanKham và maThuoc có được cung cấp không 
+        // Kiểm tra xem maHD và maThuoc có được cung cấp không 
         if (!maHD || !maThuoc) {
             return next(new ApiError(400, 'maHD và maThuoc là bắt buộc'));
         }
         const deletedCount = await invoice_detailsService.delete({ maHD, maThuoc });
         if (deletedCount === 0) {
-            return next(new ApiError(404, `invoice_details with maHD=${maHD} and maThuoc=${maThuoc} not found`));
+            return next(new ApiError(404, `Chi tiết hóa đơn với maHD=${maHD} và maThuoc=${maThuoc} không tìm thấy`));
         }
         return res.send({
-            message: `invoice_details with maHD=${maHD} and maThuoc=${maThuoc} was deleted successfully`
+            message: `Chi tiết hóa đơn với maHD=${maHD} và maThuoc=${maThuoc} được xóa thành công`
         });
-    }
-    catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                `Error occurred while deleting maHD with id=${req.params.id}`
-            )
-        );  
+    } catch (error) {
+        // Truyền lỗi trực tiếp từ Invoice_detailsService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi xóa chi tiết hóa đơn với maHD=${req.params.maHD} và maThuoc=${req.query.maThuoc}`));
     }
 };
 
@@ -160,20 +127,13 @@ exports.deleteAll = async (req, res, next) => {
         const invoice_detailsService = new Invoice_detailsService(pool);
         const deletedCount = await invoice_detailsService.deleteAll();
         if (deletedCount === 0) {
-            return next(new ApiError(404, 'No invoice_details found to delete'));
+            return next(new ApiError(404, 'Không tìm thấy chi tiết hóa đơn để xóa'));
         }   
         return res.send({
-            message: `${deletedCount} invoice_details were deleted successfully`
+            message: `${deletedCount} chi tiết hóa đơn được xóa thành công`
         });
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(    
-            new ApiError(
-                500, 
-                'An error occurred while deleting invoice_details'
-            )
-        );
+        // Truyền lỗi trực tiếp từ Invoice_detailsService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa tất cả chi tiết hóa đơn'));
     }
 };

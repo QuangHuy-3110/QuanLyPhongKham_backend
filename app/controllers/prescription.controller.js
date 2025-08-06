@@ -8,12 +8,8 @@ exports.create = async (req, res, next) => {
         const document = await prescriptionService.addPrescription(req.body);
         return res.send(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next (
-            new ApiError(500, "An error occurred while creating the prescription")
-        );
+        // Truyền lỗi trực tiếp từ PrescriptionService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm toa thuốc'));
     }
 }
 
@@ -39,15 +35,8 @@ exports.findAll = async (req, res, next) => {
         return res.status(200).json(documents);
     } catch (error) {
         console.error('Lỗi khi tìm kiếm toa thuốc:', error);
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || 'Lỗi khi tìm kiếm toa thuốc'
-            )
-        );
+        // Truyền lỗi trực tiếp từ PrescriptionService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi lấy danh sách toa thuốc'));
     }
 };
 
@@ -72,16 +61,9 @@ exports.findOne = async (req, res, next) => {
 
         return res.status(200).json(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        console.error(`Lỗi khi tìm kiếm toa thuốc với maLanKham=${req.query.maLanKham}, maThuoc=${req.query.maThuoc}:`, error);
-        return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || `Lỗi khi tìm kiếm toa thuốc với maLanKham=${req.query.maLanKham} và maThuoc=${req.query.maThuoc}`
-            )
-        );
+        console.error(`Lỗi khi tìm kiếm toa thuốc với maLanKham=${req.params.maLanKham}, maThuoc=${req.query.maThuoc}:`, error);
+        // Truyền lỗi trực tiếp từ PrescriptionService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi lấy thông tin toa thuốc với maLanKham=${req.params.maLanKham} và maThuoc=${req.query.maThuoc}`));
     }
 };
 
@@ -100,19 +82,12 @@ exports.update = async (req, res, next) => {
         }
         const document = await prescriptionService.update({maLanKham, maThuoc}, req.body);
         if (!document) {
-            return next(new ApiError(404, 'Prescription not found'));
+            return next(new ApiError(404, 'Toa thuốc không tìm thấy'));
         }
-        return res.send({message: 'Prescription was updated successfully'});
+        return res.send({message: 'Toa thuốc được cập nhật thành công'});
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                'Error occurred while updating prescription with maLanKham=' + maLanKham + ' and maThuoc=' + maThuoc
-            )
-        );
+        // Truyền lỗi trực tiếp từ PrescriptionService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi cập nhật toa thuốc với maLanKham=${req.params.maLanKham} và maThuoc=${req.query.maThuoc}`));
     }
 };
 
@@ -121,50 +96,36 @@ exports.delete = async (req, res, next) => {
         const { maLanKham } = req.params; // Lấy maLanKham từ URL path
         const { maThuoc } = req.query; // Lấy maThuoc từ query
         const prescriptionService = new PrescriptionService(pool);
-        // Kiểm tra xem maLanKham và maThuoc có được cung cấp không 
+
+        // Kiểm tra xem maLanKham và maThuoc có được cung cấp không
         if (!maLanKham || !maThuoc) {
             return next(new ApiError(400, 'maLanKham và maThuoc là bắt buộc'));
         }
         const deletedCount = await prescriptionService.delete({ maLanKham, maThuoc });
         if (deletedCount === 0) {
-            return next(new ApiError(404, `Prescription with maLanKham=${maLanKham} and maThuoc=${maThuoc} not found`));
+            return next(new ApiError(404, `Toa thuốc với maLanKham=${maLanKham} và maThuoc=${maThuoc} không tìm thấy`));
         }
         return res.send({
-            message: `Prescription with maLanKham=${maLanKham} and maThuoc=${maThuoc} was deleted successfully`
+            message: `Toa thuốc với maLanKham=${maLanKham} và maThuoc=${maThuoc} được xóa thành công`
         });
-    }
-    catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                `Error occurred while deleting record with id=${req.params.id}`
-            )
-        );  
+    } catch (error) {
+        // Truyền lỗi trực tiếp từ PrescriptionService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi xóa toa thuốc với maLanKham=${req.params.maLanKham} và maThuoc=${req.query.maThuoc}`));
     }
 };
 
 exports.deleteAll = async (req, res, next) => {
     try {
-        const PrescriptionService = new PrescriptionService(pool);
-        const deletedCount = await PrescriptionService.deleteAll();
+        const prescriptionService = new PrescriptionService(pool);
+        const deletedCount = await prescriptionService.deleteAll();
         if (deletedCount === 0) {
-            return next(new ApiError(404, 'No prescriptions found to delete'));
+            return next(new ApiError(404, 'Không tìm thấy toa thuốc để xóa'));
         }   
         return res.send({
-            message: `${deletedCount} prescriptions were deleted successfully`
+            message: `${deletedCount} toa thuốc được xóa thành công`
         });
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(    
-            new ApiError(
-                500, 
-                'An error occurred while deleting prescriptions'
-            )
-        );
+        // Truyền lỗi trực tiếp từ PrescriptionService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa tất cả toa thuốc'));
     }
 };

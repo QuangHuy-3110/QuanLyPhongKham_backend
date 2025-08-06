@@ -187,6 +187,9 @@ class PatientService {
             return { maBN: id, emailBN, cccdBN, soBHYT, hotenBN, sdtBN, ngaysinhBN: formattedDate, 
                     diachiBN, chieucao, cannang, nhommau, matkhauBN, tendangnhapBN, xoa };
         } catch (error) {
+            if (error.code === 'ER_DUP_ENTRY') {
+                throw new ApiError(400, 'Cccd bệnh nhân đã tồn tại');
+            }
             console.error('Lỗi khi cập nhật bệnh nhân:', error);
             throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi cập nhật bệnh nhân');
         } finally {

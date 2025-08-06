@@ -8,12 +8,8 @@ exports.create = async (req, res, next) => {
         const document = await drugService.addDrug(req.body);
         return res.send(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next (
-            new ApiError(500, "An error occurred while creating the drug")
-        );
+        // Truyền lỗi trực tiếp từ DrugService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm thuốc'));
     }
 }
 
@@ -36,9 +32,8 @@ exports.findAll = async (req, res, next) => {
         documents = await drugService.find(filter);
         return res.send(documents); 
     } catch (error) {
-        return next(
-            new ApiError(500, 'An error occurred while retrieving drugs')
-        );
+        // Truyền lỗi trực tiếp từ DrugService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi lấy danh sách thuốc'));
     }
 };
 
@@ -51,9 +46,8 @@ exports.findOne = async (req, res, next) => {
         }
         return res.send(document);  
     } catch (error) {
-        return next(    
-            new ApiError(500,`Error occurred while retrieving drug with id=${req.params.id}`)
-        );
+        // Truyền lỗi trực tiếp từ DrugService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi lấy thông tin thuốc với id=${req.params.id}`));
     }
 };
 
@@ -69,9 +63,8 @@ exports.update = async (req, res, next) => {
         }
         return res.send({message: 'Drug was updated successfully'});
     } catch (error) {
-        return next(
-            new ApiError(500, `Error occurred while updating drug with id=${req.params.id}`)
-        );
+        // Truyền lỗi trực tiếp từ DrugService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi cập nhật thuốc với id=${req.params.id}`));
     }
 };
 
@@ -83,11 +76,9 @@ exports.delete = async (req, res, next) => {
             return next(new ApiError(404, 'Drug not found'));
         }
         return res.send({message: 'Drug was deleted successfully'});
-    }
-    catch (error) {
-        return next(
-            new ApiError(500,`Error occurred while deleting drug with id=${req.params.id}`)
-        );  
+    } catch (error) {
+        // Truyền lỗi trực tiếp từ DrugService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi xóa thuốc với id=${req.params.id}`));
     }
 };
 
@@ -99,8 +90,7 @@ exports.deleteAll = async (req, res, next) => {
             message: `${deletedCount} Drugs were deleted successfully`
         });
     } catch (error) {
-        return next(    
-            new ApiError(500, 'An error occurred while deleting drugs')
-        );
+        // Truyền lỗi trực tiếp từ DrugService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa tất cả thuốc'));
     }
 };

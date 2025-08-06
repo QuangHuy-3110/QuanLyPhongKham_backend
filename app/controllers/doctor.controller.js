@@ -8,11 +8,10 @@ exports.create = async (req, res, next) => {
         const document = await doctorService.addDoctor(req.body);
         return res.send(document);
     } catch (error) {
-        return next (
-            new ApiError(500, "An error occurred while creating the doctor")
-        );
+        // Truyền lỗi trực tiếp từ DoctorService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm bác sĩ'));
     }
-}
+};
 
 exports.findAll = async (req, res, next) => {
     let documents = [];
@@ -32,9 +31,8 @@ exports.findAll = async (req, res, next) => {
         documents = await doctorService.find(filter);
         return res.send(documents); 
     } catch (error) {
-        return next(
-            new ApiError(500, 'An error occurred while retrieving doctors')
-        );
+        // Truyền lỗi trực tiếp từ DoctorService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi lấy danh sách bác sĩ'));
     }
 };
 
@@ -47,12 +45,8 @@ exports.findOne = async (req, res, next) => {
         }
         return res.send(document);  
     } catch (error) {
-        return next(    
-            new ApiError(
-                500,    
-                `Error occurred while retrieving doctor with id=${req.params.id}`
-            )
-        );
+        // Truyền lỗi trực tiếp từ DoctorService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi lấy thông tin bác sĩ với id=${req.params.id}`));
     }
 };
 
@@ -68,9 +62,8 @@ exports.update = async (req, res, next) => {
         }
         return res.send({message: 'Doctor was updated successfully'});
     } catch (error) {
-        return next(
-            new ApiError(500, `Error occurred while updating Doctor with id=${req.params.id}`)
-        );
+        // Truyền lỗi trực tiếp từ DoctorService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi cập nhật bác sĩ với id=${req.params.id}`));
     }
 };
 
@@ -82,11 +75,9 @@ exports.delete = async (req, res, next) => {
             return next(new ApiError(404, 'Doctor not found'));
         }
         return res.send({message: 'Doctor was deleted successfully'}); 
-    }
-    catch (error) {
-        return next(
-            new ApiError(500, `Error occurred while deleting doctor with id=${req.params.id}`)
-        );  
+    } catch (error) {
+        // Truyền lỗi trực tiếp từ DoctorService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi xóa bác sĩ với id=${req.params.id}`));
     }
 };
 
@@ -98,10 +89,7 @@ exports.deleteAll = async (req, res, next) => {
             message: `${deletedCount} Doctor were deleted successfully`
         });
     } catch (error) {
-        return next(    
-            new ApiError(500, 'An error occurred while deleting doctors')
-        );
+        // Truyền lỗi trực tiếp từ DoctorService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa tất cả bác sĩ'));
     }
 };
-// This file is part of the backend application for managing doctor records.
-// It provides the controller functions for handling HTTP requests related to doctors.

@@ -8,12 +8,8 @@ exports.create = async (req, res, next) => {
         const document = await log_detailsService.addLog_detail(req.body);
         return res.send(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next (
-            new ApiError(500, "An error occurred while creating the log_details")
-        );
+        // Truyền lỗi trực tiếp từ Log_detailsService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm chi tiết nhật ký đặt hàng'));
     }
 }
 
@@ -41,50 +37,36 @@ exports.findAll = async (req, res, next) => {
 
         return res.status(200).json(documents);
     } catch (error) {
-        console.error('Lỗi khi tìm kiếm log_details:', error);
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || 'Lỗi khi tìm kiếm log_details'
-            )
-        );
+        console.error('Lỗi khi tìm kiếm chi tiết nhật ký đặt hàng:', error);
+        // Truyền lỗi trực tiếp từ Log_detailsService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi lấy danh sách chi tiết nhật ký đặt hàng'));
     }
 };
 
 exports.findOne = async (req, res, next) => {
     try {
-        const { maNK } = req.params; // Lấy maLanKham từ URL path
+        const { maNK } = req.params; // Lấy maNK từ URL path
         const { maThuoc } = req.query; // Lấy maThuoc từ query
         const log_detailsService = new Log_detailsService(pool);
 
-        // Kiểm tra xem maLanKham và maThuoc có được cung cấp không
+        // Kiểm tra xem maNK và maThuoc có được cung cấp không
         if (!maNK || !maThuoc) {
             return next(new ApiError(400, 'maNK và maThuoc là bắt buộc'));
         }
 
-        // Gọi hàm findById với đối tượng chứa maLanKham và maThuoc
+        // Gọi hàm findById với đối tượng chứa maNK và maThuoc
         const document = await log_detailsService.findById({ maNK, maThuoc });
 
         // Kiểm tra kết quả
         if (!document) {
-            return next(new ApiError(404, `Nhật kí đặt hàng với maNK=${maNK} và maThuoc=${maThuoc} không tìm thấy`));
+            return next(new ApiError(404, `Chi tiết nhật ký đặt hàng với maNK=${maNK} và maThuoc=${maThuoc} không tìm thấy`));
         }
 
         return res.status(200).json(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        console.error(`Lỗi khi tìm kiếm Nhật kí đặt hàng với maNK=${req.query.maNK}, maThuoc=${req.query.maThuoc}:`, error);
-        return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || `Lỗi khi tìm kiếm Nhật kí đặt hàng với maNK=${req.query.maNK} và maThuoc=${req.query.maThuoc}`
-            )
-        );
+        console.error(`Lỗi khi tìm kiếm chi tiết nhật ký đặt hàng với maNK=${req.params.maNK}, maThuoc=${req.query.maThuoc}:`, error);
+        // Truyền lỗi trực tiếp từ Log_detailsService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi lấy thông tin chi tiết nhật ký đặt hàng với maNK=${req.params.maNK} và maThuoc=${req.query.maThuoc}`));
     }
 };
 
@@ -93,59 +75,44 @@ exports.update = async (req, res, next) => {
         return next(new ApiError(400, 'Data to update can not be empty'));
     }
     try {
-        const { maNK } = req.params; // Lấy maLanKham từ URL path
+        const { maNK } = req.params; // Lấy maNK từ URL path
         const { maThuoc } = req.query; // Lấy maThuoc từ query
         const log_detailsService = new Log_detailsService(pool);
 
-        // Kiểm tra xem maLanKham và maThuoc có được cung cấp không
+        // Kiểm tra xem maNK và maThuoc có được cung cấp không
         if (!maNK || !maThuoc) {
             return next(new ApiError(400, 'maNK và maThuoc là bắt buộc'));
         }
         const document = await log_detailsService.update({maNK, maThuoc}, req.body);
         if (!document) {
-            return next(new ApiError(404, 'log_details not found'));
+            return next(new ApiError(404, 'Chi tiết nhật ký đặt hàng không tìm thấy'));
         }
-        return res.send({message: 'log_details was updated successfully'});
+        return res.send({message: 'Chi tiết nhật ký đặt hàng được cập nhật thành công'});
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                'Error occurred while updating log_details with maNK=' + maNK + ' and maThuoc=' + maThuoc
-            )
-        );
+        // Truyền lỗi trực tiếp từ Log_detailsService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi cập nhật chi tiết nhật ký đặt hàng với maNK=${req.params.maNK} và maThuoc=${req.query.maThuoc}`));
     }
 };
 
 exports.delete = async (req, res, next) => {
     try {
-        const { maNK } = req.params; // Lấy maLanKham từ URL path
+        const { maNK } = req.params; // Lấy maNK từ URL path
         const { maThuoc } = req.query; // Lấy maThuoc từ query
         const log_detailsService = new Log_detailsService(pool);
-        // Kiểm tra xem maLanKham và maThuoc có được cung cấp không 
+        // Kiểm tra xem maNK và maThuoc có được cung cấp không 
         if (!maNK || !maThuoc) {
             return next(new ApiError(400, 'maNK và maThuoc là bắt buộc'));
         }
         const deletedCount = await log_detailsService.delete({ maNK, maThuoc });
         if (deletedCount === 0) {
-            return next(new ApiError(404, `log_details with maNK=${maNK} and maThuoc=${maThuoc} not found`));
+            return next(new ApiError(404, `Chi tiết nhật ký đặt hàng với maNK=${maNK} và maThuoc=${maThuoc} không tìm thấy`));
         }
         return res.send({
-            message: `log_details with maNK=${maNK} and maThuoc=${maThuoc} was deleted successfully`
+            message: `Chi tiết nhật ký đặt hàng với maNK=${maNK} và maThuoc=${maThuoc} được xóa thành công`
         });
-    }
-    catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                `Error occurred while deleting maNK with id=${req.params.id}`
-            )
-        );  
+    } catch (error) {
+        // Truyền lỗi trực tiếp từ Log_detailsService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi xóa chi tiết nhật ký đặt hàng với maNK=${req.params.maNK} và maThuoc=${req.query.maThuoc}`));
     }
 };
 
@@ -154,20 +121,13 @@ exports.deleteAll = async (req, res, next) => {
         const log_detailsService = new Log_detailsService(pool);
         const deletedCount = await log_detailsService.deleteAll();
         if (deletedCount === 0) {
-            return next(new ApiError(404, 'No log_details found to delete'));
+            return next(new ApiError(404, 'Không tìm thấy chi tiết nhật ký đặt hàng để xóa'));
         }   
         return res.send({
-            message: `${deletedCount} log_details were deleted successfully`
+            message: `${deletedCount} chi tiết nhật ký đặt hàng được xóa thành công`
         });
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(    
-            new ApiError(
-                500, 
-                'An error occurred while deleting log_details'
-            )
-        );
+        // Truyền lỗi trực tiếp từ Log_detailsService
+        return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi xóa tất cả chi tiết nhật ký đặt hàng'));
     }
 };

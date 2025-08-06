@@ -8,70 +8,46 @@ exports.create = async (req, res, next) => {
         const document = await workingtimeService.addWorkingTime(req.body);
         return res.send(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next (
-            new ApiError(500, "An error occurred while creating the prescription")
-        );
+        // Truyền lỗi trực tiếp từ WorkingTimeService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi thêm thời gian làm việc: ${error.message}`));
     }
-}
+};
 
 exports.findAll = async (req, res, next) => {
     try {
         const workingtimeService = new WorkingTimeService(pool);
         const filter = {};
-
-        // Lấy bộ lọc từ query parameters
         if (req.query.maBS) {
             filter.maBS = req.query.maBS;
         }
         if (req.query.ngaythangnam) {
             filter.ngaythangnam = req.query.ngaythangnam;
         }
-
-        // Gọi hàm find với bộ lọc
         const documents = await workingtimeService.find(filter);
         return res.status(200).json(documents);
     } catch (error) {
         console.error('Lỗi khi tìm kiếm thời gian làm việc:', error);
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                error.statusCode || 500,
-                error.message || 'Lỗi khi tìm kiếm thời gian làm việc'
-            )
-        );
+        // Truyền lỗi trực tiếp từ WorkingTimeService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi lấy danh sách thời gian làm việc: ${error.message}`));
     }
 };
 
 exports.findOne = async (req, res, next) => {
     try {
         const { maBS } = req.params;
-        const { ngaythangnam, giobatdau } = req.query; 
+        const { ngaythangnam, giobatdau } = req.query;
         const workingtimeService = new WorkingTimeService(pool);
-        // Kiểm tra xem maBS, ngaythangnam và giobatdau có được cung cấp không
         if (!maBS || !ngaythangnam || !giobatdau) {
             return next(new ApiError(400, 'maBS, ngaythangnam và giobatdau là bắt buộc'));
         }
-        // Gọi hàm findById với đối tượng chứa maBS, ngaythangnam và giobatdau
         const document = await workingtimeService.findById({ maBS, ngaythangnam, giobatdau });
         if (!document) {
-            return next(new ApiError(404, 'Working time not found'));
+            return next(new ApiError(404, 'Thời gian làm việc không tìm thấy'));
         }
         return res.status(200).json(document);
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                'Error occurred while retrieving working time with maBS=' + req.query.maBS + ', ngaythangnam=' + req.query.ngaythangnam + ' and giobatdau=' + req.query.giobatdau
-            )
-        );
+        // Truyền lỗi trực tiếp từ WorkingTimeService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi lấy thông tin thời gian làm việc với maBS=${req.query.maBS}, ngaythangnam=${req.query.ngaythangnam}, giobatdau=${req.query.giobatdau}: ${error.message}`));
     }
 };
 
@@ -81,58 +57,40 @@ exports.update = async (req, res, next) => {
     }
     try {
         const { maBS } = req.params;
-        const { ngaythangnam, giobatdau } = req.query; 
+        const { ngaythangnam, giobatdau } = req.query;
         const workingtimeService = new WorkingTimeService(pool);
-        // Kiểm tra xem maBS, ngaythangnam và giobatdau có được cung cấp không  
         if (!maBS || !ngaythangnam || !giobatdau) {
             return next(new ApiError(400, 'maBS, ngaythangnam và giobatdau là bắt buộc'));
         }
         const document = await workingtimeService.update({ maBS, ngaythangnam, giobatdau }, req.body);
         if (!document) {
-            return next(new ApiError(404, 'Working time not found'));
+            return next(new ApiError(404, 'Thời gian làm việc không tìm thấy'));
         }
         return res.status(200).json(document);
-
-    }catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                'Error occurred while updating working time with maBS=' + req.query.maBS + ', ngaythangnam=' + req.query.ngaythangnam + ' and giobatdau=' + req.query.giobatdau
-            )
-        );
+    } catch (error) {
+        // Truyền lỗi trực tiếp từ WorkingTimeService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi cập nhật thời gian làm việc với maBS=${req.query.maBS}, ngaythangnam=${req.query.ngaythangnam}, giobatdau=${req.query.giobatdau}: ${error.message}`));
     }
 };
 
 exports.delete = async (req, res, next) => {
     try {
         const { maBS } = req.params;
-        const { ngaythangnam, giobatdau } = req.query; 
+        const { ngaythangnam, giobatdau } = req.query;
         const workingtimeService = new WorkingTimeService(pool);
-        // Kiểm tra xem maBS, ngaythangnam và giobatdau có được cung cấp không  
         if (!maBS || !ngaythangnam || !giobatdau) {
             return next(new ApiError(400, 'maBS, ngaythangnam và giobatdau là bắt buộc'));
         }
         const deletedCount = await workingtimeService.delete({ maBS, ngaythangnam, giobatdau });
         if (deletedCount === 0) {
-            return next(new ApiError(404, 'Working time not found'));
+            return next(new ApiError(404, 'Thời gian làm việc không tìm thấy'));
         }
         return res.status(200).json({
-            message: 'Working time was deleted successfully'
+            message: 'Thời gian làm việc được xóa thành công'
         });
-    }
-    catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                'Error occurred while deleting working time with maBS=' + req.query.maBS + ', ngaythangnam=' + req.query.ngaythangnam + ' and giobatdau=' + req.query.giobatdau
-            )
-        );
+    } catch (error) {
+        // Truyền lỗi trực tiếp từ WorkingTimeService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi xóa thời gian làm việc với maBS=${req.query.maBS}, ngaythangnam=${req.query.ngaythangnam}, giobatdau=${req.query.giobatdau}: ${error.message}`));
     }
 };
 
@@ -141,17 +99,10 @@ exports.deleteAll = async (req, res, next) => {
         const workingtimeService = new WorkingTimeService(pool);
         const deletedCount = await workingtimeService.deleteAll();
         return res.status(200).json({
-            message: `${deletedCount} working times were deleted successfully`
+            message: `${deletedCount} thời gian làm việc được xóa thành công`
         });
     } catch (error) {
-        if (error instanceof ApiError) {
-            return next(error);
-        }
-        return next(
-            new ApiError(
-                500,    
-                'Error occurred while deleting all working times'
-            )
-        );
+        // Truyền lỗi trực tiếp từ WorkingTimeService
+        return next(error instanceof ApiError ? error : new ApiError(500, `Lỗi khi xóa tất cả thời gian làm việc: ${error.message}`));
     }
 };
