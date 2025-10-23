@@ -21,6 +21,8 @@ const loginRoutes = require('./app/routes/login.route'); // Nhập route login
 
 const emailRouter = require('./app/routes/email.route'); // Import router email
 
+const StatisticalService = require('./app/routes/statistical.route');
+
 const ApiError = require('./app/api-error');
 
 const app = express();
@@ -64,6 +66,7 @@ app.use('/api/logs', logRoutes); // API quản lý log (sửa comment)
 app.use('/api/log_details', log_detailsRoutes); // API quản lý chi tiết log (sửa comment)
 app.use('/api/email', emailRouter);  // API gửi email sẽ có đường dẫn: /api/email/send
 app.use('/api/auth', loginRoutes); // API đăng nhập và quên mật khẩu
+app.use('/api/statistical', StatisticalService); // API thống kê
 
 
 // THÊM: Route catch-all 404 với log cụ thể (thay thế middleware cũ)
