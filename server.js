@@ -2,27 +2,26 @@ const app = require('./app');
 const { Server: WebSocketServer } = require('ws');
 require('dotenv').config();
 const config = require('./app/config');
+const chatbotConfig = require('./app/config/chatbot.config');  // ⚠️ MỚI: Import chatbot config
 const pool = require('./app/utils/db.util');
 const axios = require('axios');
-const jwt = require('jsonwebtoken');  // Thêm JWT
+const jwt = require('jsonwebtoken');
+const WebSocket = require('ws');
 
 async function startServer() {
   try {
     const port = config.app.port || 3000;
 
-    // Tạo HTTP server từ app
     const httpServer = app.listen(port, () => {
       console.log(`HTTP server chạy trên cổng ${port}`);
     });
 
-    // Tích hợp WebSocket server vào HTTP server
     const wss = new WebSocketServer({ server: httpServer });
-    const clients = new Map(); // Lưu client bác sĩ và admin theo doctorId
-    const patientClients = new Map(); // Lưu client bệnh nhân theo patientId
-    const chatSessions = new Map();  // Session Rasa theo userId
-    const userStates = new Map();  // MỚI: Lưu trạng thái { logged_in: bool } theo userId
+    const clients = new Map();
+    const patientClients = new Map();
+    const chatSessions = new Map();
+    const userStates = new Map();
 
-    // Hàm verify token
     function verifyToken(token) {
       try {
         return jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
@@ -38,51 +37,73 @@ async function startServer() {
         try {
           const parsedMessage = JSON.parse(message);
 
-          // Lưu client bác sĩ hoặc admin (giữ nguyên)
+          // Init bác sĩ/admin (giữ nguyên)
           if (parsedMessage.type === 'init' && parsedMessage.doctorId) {
             clients.set(parsedMessage.doctorId, ws);
             console.log(`${parsedMessage.doctorId === 'Admin' ? 'Admin' : 'Bác sĩ'} ${parsedMessage.doctorId} đã kết nối`);
           }
 
-          // MỚI: Init bệnh nhân (logged_in dựa trên token)
+          // Init bệnh nhân (logged in)
           if (parsedMessage.type === 'init_patient') {
             const { patientId, token } = parsedMessage;
-            const isLoggedIn = !!token && !!verifyToken(token);
-            userStates.set(patientId, { logged_in: isLoggedIn });
+            
+            // ⚠️ FIX: Kiểm tra token có tồn tại VÀ verify thành công
+            let isLoggedIn = false;
+            let decoded = null;
+            
+            if (token && token !== 'null' && token !== 'undefined') {
+              decoded = verifyToken(token);
+              isLoggedIn = !!decoded;  // Chỉ true nếu decoded thành công
+            }
+            
+            userStates.set(patientId, { 
+              logged_in: isLoggedIn,
+              userData: decoded || null
+            });
             patientClients.set(patientId, ws);
-            console.log(`Bệnh nhân ${patientId} đã kết nối (logged_in: ${isLoggedIn})`);
+            console.log(`✅ Bệnh nhân ${patientId} đã kết nối (logged_in: ${isLoggedIn}, token valid: ${!!decoded})`);
           }
 
-          // MỚI: Init guest (không token)
+          // Init guest
           if (parsedMessage.type === 'init_guest') {
-            const { guestId } = parsedMessage;  // guestId như 'guest_xxx'
-            userStates.set(guestId, { logged_in: false });
+            const { guestId } = parsedMessage;
+            userStates.set(guestId, { logged_in: false, userData: null });
             patientClients.set(guestId, ws);
-            console.log(`Guest ${guestId} đã kết nối (logged_in: false)`);
+            console.log(`👤 Guest ${guestId} đã kết nối (logged_in: false)`);
           }
 
-          // MỚI: Xử lý tin nhắn chat từ bệnh nhân/guest (gửi đến Rasa với logged_in)
+          // ⚠️ SỬA: Xử lý chat message với keyword filtering CHÍNH XÁC
           if (parsedMessage.type === 'chat_message') {
-            const { userId, message } = parsedMessage;  // userId = patientId hoặc guestId
+            const { userId, message } = parsedMessage;
             const rasaUrl = process.env.RASA_URL || 'http://localhost:5005';
 
-            // Lấy trạng thái logged_in
             const state = userStates.get(userId);
             const isLoggedIn = state ? state.logged_in : false;
-            console.log(`Chat từ ${userId} (logged_in: ${isLoggedIn})`);
-
-            // SỬA: Filter keyword với ngoặc đơn đúng, mở rộng keyword (optional)
-            const advancedKeywords = ['đặt lịch', 'lịch hẹn', 'book_appointment', 'tư vấn', 'consultation', 'khám bệnh', 'exam'];
-            const isAdvancedRequest = advancedKeywords.some(keyword => message.toLowerCase().includes(keyword.toLowerCase()));
             
-            if (!isLoggedIn && isAdvancedRequest) {
-              console.log(`Block advanced request từ guest ${userId}: "${message}"`);
+            // ⚠️ DEBUG: Log rõ ràng state
+            console.log(`📩 Chat message from ${userId}:`);
+            console.log(`   - Message: "${message}"`);
+            console.log(`   - logged_in: ${isLoggedIn}`);
+            console.log(`   - State:`, state);
+
+            // ⚠️ SỬA: Danh sách keyword cần đăng nhập (sử dụng config)
+            const restrictedKeywords = chatbotConfig.restrictedKeywords;
+            
+            const isRestrictedRequest = restrictedKeywords.some(keyword => 
+              message.toLowerCase().includes(keyword.toLowerCase())
+            );
+            
+            // Block nếu guest gửi request restricted
+            if (!isLoggedIn && isRestrictedRequest) {
+              console.log(`🚫 Block restricted request từ guest ${userId}: "${message}"`);
               if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                   type: 'bot_response',
                   data: { 
-                    messages: [{ text: 'Bạn cần đăng nhập để sử dụng tính năng này. Hãy đăng nhập để đặt lịch hoặc tư vấn nhé!' }], 
-                    sessionId: null  // Hoặc dùng sessionId hiện tại nếu có
+                    messages: [{ 
+                      text: chatbotConfig.restrictedMessage  // ⚠️ Dùng message từ config
+                    }], 
+                    sessionId: chatSessions.get(userId) || null
                   }
                 }));
               }
@@ -97,13 +118,14 @@ async function startServer() {
             }
 
             try {
-              // Gọi Rasa REST API với metadata logged_in
+              // Gọi Rasa với metadata (logged_in + patientId)
               const response = await axios.post(`${rasaUrl}/webhooks/rest/webhook`, {
                 sender: sessionId,
                 message: message,
                 metadata: { 
-                  patientId: userId, 
-                  logged_in: isLoggedIn  // Rasa sẽ dùng custom action để set slot
+                  patientId: isLoggedIn ? userId : null,  // Chỉ gửi patientId nếu logged in
+                  logged_in: isLoggedIn,
+                  user_data: state?.userData || null  // Gửi thêm user data nếu có
                 }
               }, { timeout: 10000 });
 
@@ -116,24 +138,35 @@ async function startServer() {
                     sessionId 
                   }
                 }));
-                console.log(`Full bot response cho ${userId}:`, JSON.stringify(botResponse, null, 2));
+                console.log(`✅ Bot response cho ${userId} (${botResponse.length} messages)`);
               }
             } catch (error) {
-              console.error('Lỗi gọi Rasa:', error.message);
+              console.error('❌ Lỗi gọi Rasa:', error.message);
               if (ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                   type: 'bot_response',
-                  data: { messages: [{ text: 'Lỗi kết nối bot. Vui lòng thử lại.' }] }
+                  data: { messages: [{ text: '⚠️ Lỗi kết nối bot. Vui lòng thử lại sau.' }] }
                 }));
               }
             }
           }
 
-          // Xử lý lịch hẹn mới từ bệnh nhân
+          // ⚠️ MỚI: Handle login update từ frontend (khi user login/logout trong tab)
+          if (parsedMessage.type === 'update_login_status') {
+            const { userId, token } = parsedMessage;
+            const decoded = verifyToken(token);
+            const isLoggedIn = !!decoded;
+            
+            userStates.set(userId, { 
+              logged_in: isLoggedIn,
+              userData: decoded || null
+            });
+            console.log(`🔄 Cập nhật login status cho ${userId}: ${isLoggedIn}`);
+          }
+
+          // Các handlers khác (appointment, patient, drug, etc.) - GIỮ NGUYÊN
           if (parsedMessage.type === 'new_appointment') {
             const appointment = parsedMessage.data;
-
-            // Gửi thông báo đến bác sĩ
             const doctorWs = clients.get(appointment.maBS);
             if (doctorWs && doctorWs.readyState === WebSocket.OPEN) {
               doctorWs.send(JSON.stringify({
@@ -141,80 +174,54 @@ async function startServer() {
                 data: appointment,
               }));
               console.log(`Thông báo gửi đến bác sĩ ${appointment.maBS}`);
-            } else {
-              console.log(`Bác sĩ ${appointment.maBS} không trực tuyến`);
             }
-
-            // Gửi thông báo đến admin
             const adminWs = clients.get('Admin');
             if (adminWs && adminWs.readyState === WebSocket.OPEN) {
               adminWs.send(JSON.stringify({
                 type: 'appointment_update',
                 data: appointment,
               }));
-              console.log('Thông báo gửi đến Admin');
-            } else {
-              console.log('Admin không trực tuyến');
             }
           }
 
-          // Xử lý hủy lịch hẹn từ admin
+          // Cancel appointment handler - GIỮ NGUYÊN
           if (parsedMessage.type === 'cancel_appointment' && parsedMessage.sender === 'Admin') {
             const appointment = parsedMessage.data;
-
-            // Gửi thông báo đến bệnh nhân
             const patientWs = patientClients.get(appointment.maBN);
             if (patientWs && patientWs.readyState === WebSocket.OPEN) {
               patientWs.send(JSON.stringify({
                 type: 'appointment_cancelled',
                 data: appointment,
               }));
-              console.log(`Thông báo hủy gửi đến bệnh nhân ${appointment.maBN}`);
-            } else {
-              console.log(`Bệnh nhân ${appointment.maBN} không trực tuyến`);
             }
-
-            // Gửi thông báo đến bác sĩ (tùy chọn)
             const doctorWs = clients.get(appointment.maBS);
             if (doctorWs && doctorWs.readyState === WebSocket.OPEN) {
               doctorWs.send(JSON.stringify({
                 type: 'appointment_cancelled',
                 data: appointment,
               }));
-              console.log(`Thông báo hủy gửi đến bác sĩ ${appointment.maBS}`);
-            } else {
-              console.log(`Bác sĩ ${appointment.maBS} không trực tuyến`);
             }
           }
 
-          // Xử lý hẹn từ bác sĩ
+          // Examined appointment - GIỮ NGUYÊN
           if (parsedMessage.type === 'appointment_examined' && parsedMessage.sender === 'doctor') {
             const appointment = parsedMessage.data;
-
-            // Gửi thông báo đến bệnh nhân
             const patientWs = patientClients.get(appointment.maBN);
             if (patientWs && patientWs.readyState === WebSocket.OPEN) {
               patientWs.send(JSON.stringify({
                 type: 'appointment_examined',
                 data: appointment,
               }));
-              console.log(`Thông báo đã khám gửi đến bệnh nhân ${appointment.maBN}`);
-            } else {
-              console.log(`Bệnh nhân ${appointment.maBN} không trực tuyến`);
             }
-
-            // Gửi thông báo đến admin
             const adminWs = clients.get('Admin');
             if (adminWs && adminWs.readyState === WebSocket.OPEN) {
               adminWs.send(JSON.stringify({
                 type: 'appointment_examined',
                 data: appointment,
               }));
-              console.log(`Thông báo đã khám gửi đến Admin`);
-            } else {
-              console.log(`Admin không trực tuyến`);
             }
           }
+
 
           // Thêm bệnh nhân
           if (parsedMessage.type === 'interact_patient' && parsedMessage.sender === 'doctor') {
@@ -332,7 +339,7 @@ async function startServer() {
       });
 
       ws.on('close', () => {
-        // Xóa client bác sĩ hoặc admin (giữ nguyên)
+        // Cleanup khi disconnect
         for (let [clientId, client] of clients) {
           if (client === ws) {
             clients.delete(clientId);
@@ -340,13 +347,11 @@ async function startServer() {
             break;
           }
         }
-
-        // Xóa client bệnh nhân/guest
         for (let [userId, client] of patientClients) {
           if (client === ws) {
             patientClients.delete(userId);
-            userStates.delete(userId);  // MỚI: Cleanup trạng thái
-            chatSessions.delete(userId);  // Cleanup session
+            userStates.delete(userId);
+            chatSessions.delete(userId);
             console.log(`User ${userId} đã ngắt kết nối`);
             break;
           }
