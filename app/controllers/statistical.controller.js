@@ -72,9 +72,19 @@ exports.getThuChiStats = async (req, res, next) => {
 
 exports.getBacSiStats = async (req, res, next) => {
     try {
+        const { thang, nam } = req.query; // Lấy từ query params (?thang=10&nam=2025)
+
+        // Default: tháng/năm hiện tại nếu không truyền
+        const currentThang = parseInt(thang) || new Date().getMonth() + 1;
+        const currentNam = parseInt(nam) || new Date().getFullYear();
+
         const statisticalService = new StatisticalService(pool);
-        const stats = await statisticalService.getBacSiStats();
-        return res.status(200).json(stats);
+        const stats = await statisticalService.getBacSiStats(currentThang, currentNam);
+        return res.status(200).json({
+            success: true,
+            data: stats,
+            filters: { thang: currentThang, nam: currentNam } // Thêm info filter cho frontend
+        });
     } catch (error) {
         // Truyền lỗi trực tiếp từ StatisticalService
         return next(error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi lấy thống kê bác sĩ'));

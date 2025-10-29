@@ -9,7 +9,7 @@ class SpecialtiesService {
     async addSpecialties(Specialties) {
         const connection = await this.pool.getConnection();
         try {
-            const { maCK, tenCK } = Specialties;
+            const { maCK, tenCK, mota } = Specialties;
 
             // Kiểm tra xem chuyên khoa đã tồn tại chưa
             const [existing] = await connection.query(
@@ -21,11 +21,11 @@ class SpecialtiesService {
             }
             // Chèn chuyên khoa mới
             await connection.query(
-                'INSERT INTO chuyenkhoa (maCK, tenCK) VALUES (?, ?)',
-                [maCK, tenCK]
+                'INSERT INTO chuyenkhoa (maCK, tenCK, mota) VALUES (?, ?, ?)',
+                [maCK, tenCK, mota]
             );
             // Trả về thông tin chuyên khoa
-            return { maCK, tenCK };
+            return { maCK, tenCK, mota };
         } catch (error) {
             // Log lỗi và ném ra ApiError
             if (error.code === 'ER_DUP_ENTRY') {
@@ -96,9 +96,9 @@ class SpecialtiesService {
     async update(id, payload) {
         const connection = await this.pool.getConnection();
         try {
-            const { maCK, tenCK } = payload;
-            const query = 'UPDATE chuyenkhoa SET maCK = ?, tenCK = ? WHERE maCK = ?';
-            const [result] = await connection.query(query, [maCK, tenCK, id]);
+            const { maCK, tenCK, mota } = payload;
+            const query = 'UPDATE chuyenkhoa SET maCK = ?, tenCK = ?, mota = ? WHERE maCK = ?';
+            const [result] = await connection.query(query, [maCK, tenCK, mota, id]);
 
             // Kiểm tra xem có bản ghi nào được cập nhật không
             if (result.affectedRows === 0) {

@@ -84,10 +84,19 @@ class StatisticalService {
     }
 
     // 6. Lấy thống kê bác sĩ (trả về bảng kết quả)
-    async getBacSiStats() {
+    async getBacSiStats(thang, nam) {
+        // Validation cơ bản (tùy chọn, để tránh lỗi)
+        if (!Number.isInteger(thang) || thang < 1 || thang > 12) {
+            throw new ApiError(400, 'Tháng phải là số nguyên từ 1 đến 12');
+        }
+        if (!Number.isInteger(nam) || nam < 1900) {
+            throw new ApiError(400, 'Năm phải là số nguyên hợp lệ (>= 1900)');
+        }
+
         const connection = await this.pool.getConnection();
         try {
-            const [rows] = await connection.query('CALL GetBacSiStats()');
+            // Sử dụng parameterized query để truyền tham số an toàn
+            const [rows] = await connection.query('CALL GetBacSiStats(?, ?)', [thang, nam]);
             return rows[0]; // mysql2 trả về mảng result sets, rows[0] là bảng kết quả đầu tiên
         } catch (error) {
             throw new ApiError(500, 'Error fetching BacSiStats: ' + error.message);

@@ -41,7 +41,7 @@ class DoctorService {
         const connection = await this.pool.getConnection();
         try {
             const { cccdBS, tenBS, ngaysinhBS, sdtBS, emailBS, 
-                    diachiBS, soCCHN, noicapCCHN, matkhau } = doctor;
+                    diachiBS, soCCHN, noicapCCHN, matkhau, gioithieu } = doctor;
 
             // Kiểm tra cccdBS đã tồn tại
             const [existing] = await connection.query(
@@ -73,12 +73,12 @@ class DoctorService {
     
             // Chèn bác sĩ với maBS
             await connection.query(
-                'INSERT INTO bacsi (maBS, cccdBS, tenBS, ngaysinhBS, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [maBS, cccdBS, tenBS, formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN,  matkhau]
+                'INSERT INTO bacsi (maBS, cccdBS, tenBS, ngaysinhBS, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, gioithieu) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [maBS, cccdBS, tenBS, formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN,  matkhau, gioithieu]
             );
     
             // Trả về thông tin bệnh nhân
-            return { maBS, cccdBS, tenBS, ngaysinhBS: formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau };
+            return { maBS, cccdBS, tenBS, ngaysinhBS: formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, gioithieu };
         } catch (error) {
             console.error('Lỗi khi thêm bác sĩ:', error);
             throw error instanceof ApiError ? error : new ApiError(500, 'Lỗi khi thêm bác sĩ');
@@ -184,7 +184,7 @@ class DoctorService {
     async update(id, payload) {
         const connection = await this.pool.getConnection();
         try {
-            const { cccdBS, tenBS, ngaysinhBS, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, xoa } = payload;
+            const { cccdBS, tenBS, ngaysinhBS, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, xoa, gioithieu } = payload;
 
             // Chuyển đổi định dạng ngày sinh
             const formattedDate = this.formatDateToMySQL(ngaysinhBS);
@@ -192,16 +192,16 @@ class DoctorService {
             const query = `
                 UPDATE bacsi
                 SET cccdBS = ?, tenBS = ?, ngaysinhBS = ?, sdtBS = ?, emailBS = ?,
-                    diachiBS = ?, soCCHN = ?, noicapCCHN = ?, matkhau = ?, xoa = ?
+                    diachiBS = ?, soCCHN = ?, noicapCCHN = ?, matkhau = ?, xoa = ?, gioithieu = ?
                 WHERE maBS = ?
             `;
-            const params = [cccdBS, tenBS, formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, xoa, id];
+            const params = [cccdBS, tenBS, formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, xoa, gioithieu, id];
             const [result] = await connection.query(query, params);
             
             if (result.affectedRows === 0) {
                 throw new ApiError(404, 'Không tìm thấy bác sĩ với ID: ' + id);
             }
-            return { maBS: id, cccdBS, tenBS, ngaysinhBS: formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, xoa };
+            return { maBS: id, cccdBS, tenBS, ngaysinhBS: formattedDate, sdtBS, emailBS, diachiBS, soCCHN, noicapCCHN, matkhau, xoa, gioithieu };
         } catch (error) {
             if (error.code === 'ER_DUP_ENTRY') {
                 throw new ApiError(400, 'Cccd bác sĩ đã tồn tại');
