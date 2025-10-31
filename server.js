@@ -22,6 +22,7 @@ async function startServer() {
     const chatSessions = new Map();
     const userStates = new Map();
 
+    const humanChatStates = new Map();
     function verifyToken(token) {
       try {
         return jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
@@ -41,6 +42,19 @@ async function startServer() {
           if (parsedMessage.type === 'init' && parsedMessage.doctorId) {
             clients.set(parsedMessage.doctorId, ws);
             console.log(`${parsedMessage.doctorId === 'Admin' ? 'Admin' : 'Bác sĩ'} ${parsedMessage.doctorId} đã kết nối`);
+
+            // ⚠️ MỚI: Nếu Admin kết nối, gửi cho họ danh sách chat đang chờ
+            if (parsedMessage.doctorId === 'Admin') {
+                const waitingUsers = [];
+                humanChatStates.forEach((state, userId) => {
+                    if (state === 'waiting') {
+                        waitingUsers.push({ userId, state: userStates.get(userId) });
+                    }
+                });
+                if (waitingUsers.length > 0) {
+                    ws.send(JSON.stringify({ type: 'waiting_list', data: waitingUsers }));
+                }
+            }
           }
 
           // Init bệnh nhân (logged in)
@@ -72,11 +86,126 @@ async function startServer() {
             console.log(`👤 Guest ${guestId} đã kết nối (logged_in: false)`);
           }
 
+          // ⚠️ MỚI: Xử lý yêu cầu Handoff
+          if (parsedMessage.type === 'request_human_handoff') {
+            const { userId, context } = parsedMessage;
+            humanChatStates.set(userId, 'waiting'); // Trạng thái đang chờ
+            
+            const adminWs = clients.get('Admin');
+            
+            if (adminWs && adminWs.readyState === WebSocket.OPEN) {
+                // Gửi cho Admin
+                adminWs.send(JSON.stringify({
+                    type: 'new_support_request',
+                    data: {
+                        userId: userId,
+                        // Gửi kèm lịch sử chat (context) nếu có
+                        history: context || [{ text: 'Bệnh nhân yêu cầu hỗ trợ.' }]
+                    }
+                }));
+                
+                // Gửi cho Patient
+                ws.send(JSON.stringify({
+                    type: 'handoff_initiated',
+                    text: 'Đã gửi yêu cầu đến hỗ trợ viên. Vui lòng đợi trong giây lát...'
+                }));
+                console.log(`[Handoff] Yêu cầu từ ${userId} đã gửi đến Admin.`);
+            } else {
+                // Gửi cho Patient
+                ws.send(JSON.stringify({
+                    type: 'handoff_initiated',
+                    text: 'Hiện không có hỗ trợ viên nào trực tuyến. Vui lòng thử lại sau.'
+                }));
+                humanChatStates.set(userId, 'bot'); // Trả lại chế độ bot
+                console.log(`[Handoff] Yêu cầu từ ${userId} thất bại, Admin offline.`);
+            }
+          }
+
+          // ⚠️ MỚI: Xử lý tin nhắn chat trực tiếp (Human-to-Human)
+          if (parsedMessage.type === 'human_chat_message') {
+            const { sender, userId, text, recipientId } = parsedMessage;
+
+            if (sender === 'Patient') {
+                // Bệnh nhân gửi -> Chuyển cho Admin
+                humanChatStates.set(userId, 'human'); // Đảm bảo trạng thái là 'human'
+                const adminWs = clients.get('Admin');
+                if (adminWs && adminWs.readyState === WebSocket.OPEN) {
+                    adminWs.send(JSON.stringify({
+                        type: 'human_chat_message',
+                        userId: userId, // Báo cho Admin biết tin nhắn này của ai
+                        text: text
+                    }));
+                    console.log(`[Handoff] Patient ${userId} -> Admin`);
+                }
+            }
+            
+            if (sender === 'Admin') {
+                // Admin gửi -> Chuyển cho Bệnh nhân
+                const patientWs = patientClients.get(recipientId); // 'recipientId' là userId của bệnh nhân
+                if (patientWs && patientWs.readyState === WebSocket.OPEN) {
+                    humanChatStates.set(recipientId, 'human'); // Đảm bảo trạng thái là 'human'
+                    patientWs.send(JSON.stringify({
+                        type: 'human_chat_message',
+                        sender: 'Admin',
+                        text: text
+                    }));
+                    console.log(`[Handoff] Admin -> Patient ${recipientId}`);
+                }
+            }
+          }
+
+          // ⚠️ MỚI: Xử lý kết thúc Handoff
+          if (parsedMessage.type === 'end_human_chat') {
+            const { userId, initiatedBy } = parsedMessage; // initiatedBy có thể là 'Admin' hoặc 'Patient'
+            humanChatStates.set(userId, 'bot'); // Chuyển về chế độ bot
+            
+            console.log(`[Handoff] Chat giữa Admin và ${userId} đã kết thúc.`);
+
+            if (initiatedBy === 'Admin') {
+                // Admin kết thúc, báo cho Patient
+                const patientWs = patientClients.get(userId);
+                if (patientWs && patientWs.readyState === WebSocket.OPEN) {
+                    patientWs.send(JSON.stringify({
+                        type: 'handoff_ended',
+                        text: 'Hỗ trợ viên đã kết thúc trò chuyện. Bạn quay lại chat với Bot.'
+                    }));
+                }
+            } else {
+                // Patient kết thúc, báo cho Admin
+                const adminWs = clients.get('Admin');
+                if (adminWs && adminWs.readyState === WebSocket.OPEN) {
+                    adminWs.send(JSON.stringify({
+                        type: 'handoff_ended',
+                        userId: userId, // Báo cho Admin biết chat nào kết thúc
+                        text: `Bệnh nhân ${userId} đã kết thúc trò chuyện.`
+                    }));
+                }
+            }
+          }
+
+
           // ⚠️ SỬA: Xử lý chat message với keyword filtering CHÍNH XÁC
           if (parsedMessage.type === 'chat_message') {
             const { userId, message } = parsedMessage;
-            const rasaUrl = process.env.RASA_URL || 'http://localhost:5005';
 
+            // ⚠️ SỬA LẠI ĐIỀU KIỆN KIỂM TRA
+            const chatState = humanChatStates.get(userId);
+
+            // Chỉ bỏ qua Rasa nếu user ĐANG CHỜ hoặc ĐANG CHAT VỚI NGƯỜI
+            // Thay vì (chatState !== 'bot')
+            if (chatState === 'human' || chatState === 'waiting') {
+                console.log(`[Rasa] Bỏ qua tin nhắn (đang ở chế độ ${chatState}): ${message}`);
+                
+                // Gửi lại thông báo cho user biết họ đang ở đâu
+                ws.send(JSON.stringify({
+                    type: 'bot_response',
+                    data: { messages: [{ text: 'Bạn đang trong cuộc trò chuyện với hỗ trợ viên. Để quay lại chat với bot, vui lòng "Kết thúc trò chuyện".' }] }
+                }));
+                return; // Dừng lại, không gửi cho Rasa
+            }
+
+
+            const rasaUrl = process.env.RASA_URL || 'http://localhost:5005';
             const state = userStates.get(userId);
             const isLoggedIn = state ? state.logged_in : false;
             
@@ -161,6 +290,7 @@ async function startServer() {
               logged_in: isLoggedIn,
               userData: decoded || null
             });
+            humanChatStates.set(userId, 'bot');
             console.log(`🔄 Cập nhật login status cho ${userId}: ${isLoggedIn}`);
           }
 
@@ -352,6 +482,7 @@ async function startServer() {
             patientClients.delete(userId);
             userStates.delete(userId);
             chatSessions.delete(userId);
+            humanChatStates.delete(userId); // ⚠️ MỚI: Xóa trạng thái handoff
             console.log(`User ${userId} đã ngắt kết nối`);
             break;
           }
