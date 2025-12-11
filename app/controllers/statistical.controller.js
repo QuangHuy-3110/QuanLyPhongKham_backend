@@ -1,5 +1,5 @@
 const StatisticalService = require('../services/statistical.service');
-const pool = require('../utils/db.util');
+const { pool } = require('../utils/db.util');
 const ApiError = require('../api-error');
 
 exports.getBenhNhanStats = async (req, res, next) => {

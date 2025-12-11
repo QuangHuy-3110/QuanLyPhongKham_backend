@@ -1,4 +1,4 @@
-const pool = require('../utils/db.util');  // Require pool trước (giả sử đường dẫn đúng)
+const { pool } = require('../utils/db.util');  // Require pool trước (giả sử đường dẫn đúng)
 const ApiError = require('../api-error');  // Require ApiError
 
 // SỬA: Require AuthService với error handling

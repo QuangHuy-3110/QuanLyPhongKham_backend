@@ -1,5 +1,5 @@
 const DoctorRoleService = require('../services/doctor_role.service');
-const pool = require('../utils/db.util');
+const { pool } = require('../utils/db.util');
 const ApiError = require('../api-error');
 
 exports.create = async (req, res, next) => {

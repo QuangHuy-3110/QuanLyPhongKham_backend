@@ -18,16 +18,38 @@ const pool = mysql.createPool({
     queueLimit: config.db.queueLimit || 0
 });
 
-// Kiểm tra kết nối ban đầu
+const pool2 = mysql.createPool({
+    host: config.db.host,
+    user: config.db.user,
+    password: config.db.password,
+    database: config.db.database2,
+    waitForConnections: true,
+    connectionLimit: config.db.connectionLimit || 10, // Giá trị mặc định
+    queueLimit: config.db.queueLimit || 0
+});
+
+
+// Kiểm tra kết nối
 (async () => {
     try {
-        const connection = await pool.getConnection();
-        console.log('Kết nối MySQL thành công!');
-        connection.release();
+        // Test Pool 1
+        const conn1 = await pool.getConnection();
+        console.log(`✅ Kết nối DB Chính (${config.db.database}) thành công!`);
+        conn1.release();
+
+        // Test Pool 2
+        const conn2 = await pool2.getConnection();
+        console.log(`✅ Kết nối DB Phụ (${config.db.database2}) thành công!`);
+        conn2.release();
     } catch (error) {
-        console.error('Lỗi khi kết nối MySQL:', error.message);
-        throw error;
+        console.error('❌ Lỗi kết nối MySQL:', error.message);
+        // Tùy chọn: process.exit(1) nếu DB chết thì sập server luôn
     }
 })();
 
-module.exports = pool;
+// XUẤT RA CẢ 2 POOL DƯỚI DẠNG OBJECT
+// Tôi khuyên nên đặt tên rõ ràng hơn thay vì pool/pool2
+module.exports = { 
+    pool, 
+    pool2 
+};

@@ -23,6 +23,8 @@ const emailRouter = require('./app/routes/email.route'); // Import router email
 
 const StatisticalService = require('./app/routes/statistical.route');
 
+const leadRoutes = require('./app/routes/lead.routes');
+
 const ApiError = require('./app/api-error');
 
 const app = express();
@@ -67,7 +69,7 @@ app.use('/api/log_details', log_detailsRoutes); // API quản lý chi tiết log
 app.use('/api/email', emailRouter);  // API gửi email sẽ có đường dẫn: /api/email/send
 app.use('/api/auth', loginRoutes); // API đăng nhập và quên mật khẩu
 app.use('/api/statistical', StatisticalService); // API thống kê
-
+app.use('/api/leads', leadRoutes); // API quản lý leads
 
 // THÊM: Route catch-all 404 với log cụ thể (thay thế middleware cũ)
 app.use((req, res, next) => {

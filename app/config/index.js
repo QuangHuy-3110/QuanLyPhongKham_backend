@@ -8,6 +8,7 @@ const config = {
         user: process.env.MYSQL_USER || 'root',      // Tên người dùng MySQL
         password: process.env.MYSQL_PASSWORD || '1', // Mật khẩu MySQL
         database: process.env.MYSQL_DATABASE || 'ql_phongkham', // Tên cơ sở dữ liệu
+        database2: process.env.MYSQL_DATABASE2 || 'chat_clinic', // Tên cơ sở dữ liệu
         connectionLimit: process.env.MYSQL_CONNECTION_LIMIT || 10,// Giới hạn kết nối (dùng cho pool)
         queueLimit: process.env.DB_QUEUE_LIMIT || 0 
     },

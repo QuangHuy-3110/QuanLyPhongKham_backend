@@ -1,5 +1,5 @@
 const PrescriptionService = require('../services/prescription.service');
-const pool = require('../utils/db.util');
+const { pool } = require('../utils/db.util');
 const ApiError = require('../api-error');
 
 exports.create = async (req, res, next) => {

@@ -1,5 +1,5 @@
 const Invoice_detailsService = require('../services/invoice_details.service');
-const pool = require('../utils/db.util');
+const { pool } = require('../utils/db.util');
 const ApiError = require('../api-error');
 
 exports.create = async (req, res, next) => {
